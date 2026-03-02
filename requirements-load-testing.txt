@@ -1,0 +1,7 @@
+# Load Testing Dependencies
+# Install with: pip install -r requirements-load-testing.txt
+
+locust==2.20.1
+requests==2.31.0
+faker==20.1.0
+firebase-admin==6.5.0

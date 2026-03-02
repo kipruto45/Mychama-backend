@@ -1,0 +1,622 @@
+from datetime import timedelta
+
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.test import TestCase, override_settings
+from rest_framework.test import APIRequestFactory, force_authenticate
+
+from apps.accounts.models import ReferralReward
+from apps.billing.models import BillingCredit
+from apps.billing.services import get_latest_subscription
+from apps.chama.models import Chama, MemberStatus, Membership, MembershipRole
+from apps.chama.models import InviteLink, MembershipRequest, MembershipRequestSource
+from apps.chama.views import (
+    InviteJoinView,
+    InviteAcceptAliasView,
+    InviteLinkListCreateView,
+    InviteLookupAliasView,
+    JoinCodeEnableDisableView,
+    JoinCodeJoinAliasView,
+    JoinCodeJoinView,
+    JoinCodeValidateAliasView,
+    JoinCodeValidateView,
+)
+from apps.chama.wizard_views import complete_wizard, group_setup
+
+
+class ChamaModelTests(TestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
+    def test_new_chamas_get_unique_join_codes(self):
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            phone="+254700000111",
+            password="testpass123",
+            full_name="Test User",
+        )
+
+        first = Chama.objects.create(
+            name="Join Code Test Alpha",
+            created_by=user,
+            updated_by=user,
+        )
+        second = Chama.objects.create(
+            name="Join Code Test Beta",
+            created_by=user,
+            updated_by=user,
+        )
+
+        self.assertTrue(first.join_code)
+        self.assertTrue(second.join_code)
+        self.assertNotEqual(first.join_code, second.join_code)
+        self.assertIsNotNone(first.join_code_expires_at)
+        self.assertIsNotNone(second.join_code_expires_at)
+
+    def test_new_users_get_referral_codes(self):
+        user_model = get_user_model()
+        first = user_model.objects.create_user(
+            phone="+254700000112",
+            password="testpass123",
+            full_name="Referral One",
+        )
+        second = user_model.objects.create_user(
+            phone="+254700000113",
+            password="testpass123",
+            full_name="Referral Two",
+        )
+
+        self.assertTrue(first.referral_code)
+        self.assertTrue(second.referral_code)
+        self.assertNotEqual(first.referral_code, second.referral_code)
+
+    def test_group_setup_accepts_valid_referral_code(self):
+        user_model = get_user_model()
+        referrer = user_model.objects.create_user(
+            phone="+254700000114",
+            password="testpass123",
+            full_name="Referrer User",
+        )
+        creator = user_model.objects.create_user(
+            phone="+254700000115",
+            password="testpass123",
+            full_name="Creator User",
+        )
+
+        request = APIRequestFactory().post(
+            "/api/v1/chamas/wizard/group-setup",
+            {
+                "organization_name": "Referral Chama",
+                "member_count": 12,
+                "group_type": "savings",
+                "user_role": "CHAMA_ADMIN",
+                "country": "Kenya",
+                "currency": "KES",
+                "referral_enabled": True,
+                "referral_code": referrer.referral_code,
+            },
+            format="json",
+        )
+        force_authenticate(request, user=creator)
+
+        response = group_setup(request)
+
+        self.assertEqual(response.status_code, 200)
+        chama = Chama.objects.get(id=response.data["chama_id"])
+        self.assertEqual(chama.referred_by_id, referrer.id)
+        self.assertEqual(chama.referral_code_used, referrer.referral_code)
+        self.assertIsNotNone(chama.referral_applied_at)
+
+    def test_group_setup_rejects_invalid_referral_code(self):
+        user_model = get_user_model()
+        creator = user_model.objects.create_user(
+            phone="+254700000116",
+            password="testpass123",
+            full_name="Creator User",
+        )
+
+        request = APIRequestFactory().post(
+            "/api/v1/chamas/wizard/group-setup",
+            {
+                "organization_name": "Invalid Referral Chama",
+                "member_count": 12,
+                "group_type": "savings",
+                "user_role": "CHAMA_ADMIN",
+                "country": "Kenya",
+                "currency": "KES",
+                "referral_enabled": True,
+                "referral_code": "BADCODE123",
+            },
+            format="json",
+        )
+        force_authenticate(request, user=creator)
+
+        response = group_setup(request)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data["detail"],
+            "The referral code you entered is invalid.",
+        )
+
+    @override_settings(REFERRAL_REWARD_EXTENSION_DAYS=5)
+    def test_complete_wizard_applies_referral_reward_to_referrer_subscription(self):
+        user_model = get_user_model()
+        referrer = user_model.objects.create_user(
+            phone="+254700000121",
+            password="testpass123",
+            full_name="Reward Referrer",
+        )
+        creator = user_model.objects.create_user(
+            phone="+254700000122",
+            password="testpass123",
+            full_name="Reward Creator",
+        )
+
+        referrer_chama = Chama.objects.create(
+            name="Referrer Home Chama",
+            created_by=referrer,
+            updated_by=referrer,
+        )
+        Membership.objects.create(
+            user=referrer,
+            chama=referrer_chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=referrer,
+            approved_at=referrer_chama.created_at,
+            created_by=referrer,
+            updated_by=referrer,
+        )
+        referrer_subscription = get_latest_subscription(referrer_chama)
+        original_period_end = referrer_subscription.current_period_end
+
+        group_setup_request = APIRequestFactory().post(
+            "/api/v1/chamas/wizard/group-setup",
+            {
+                "organization_name": "Rewarded Referral Chama",
+                "member_count": 8,
+                "group_type": "savings",
+                "user_role": "CHAMA_ADMIN",
+                "country": "Kenya",
+                "currency": "KES",
+                "referral_enabled": True,
+                "referral_code": referrer.referral_code,
+            },
+            format="json",
+        )
+        force_authenticate(group_setup_request, user=creator)
+        response = group_setup(group_setup_request)
+        self.assertEqual(response.status_code, 200)
+
+        complete_request = APIRequestFactory().post(
+            "/api/v1/chamas/wizard/complete",
+            {},
+            format="json",
+        )
+        force_authenticate(complete_request, user=creator)
+        complete_response = complete_wizard(complete_request)
+
+        self.assertEqual(complete_response.status_code, 200)
+
+        reward = ReferralReward.objects.get(referred_chama_id=response.data["chama_id"])
+        self.assertEqual(reward.status, ReferralReward.APPLIED)
+        self.assertEqual(reward.reward_value, 5)
+        self.assertEqual(reward.rewarded_chama_id, referrer_chama.id)
+
+        referrer_subscription.refresh_from_db()
+        self.assertEqual(
+            referrer_subscription.current_period_end,
+            original_period_end + timedelta(days=5),
+        )
+
+    @override_settings(
+        REFERRAL_REWARD_TYPE=ReferralReward.BILLING_CREDIT,
+        REFERRAL_REWARD_CREDIT_AMOUNT=1500,
+    )
+    def test_complete_wizard_issues_referral_billing_credit(self):
+        user_model = get_user_model()
+        referrer = user_model.objects.create_user(
+            phone="+254700000123",
+            password="testpass123",
+            full_name="Credit Referrer",
+        )
+        creator = user_model.objects.create_user(
+            phone="+254700000124",
+            password="testpass123",
+            full_name="Credit Creator",
+        )
+
+        referrer_chama = Chama.objects.create(
+            name="Credit Referrer Chama",
+            created_by=referrer,
+            updated_by=referrer,
+        )
+        Membership.objects.create(
+            user=referrer,
+            chama=referrer_chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=referrer,
+            approved_at=referrer_chama.created_at,
+            created_by=referrer,
+            updated_by=referrer,
+        )
+
+        group_setup_request = APIRequestFactory().post(
+            "/api/v1/chamas/wizard/group-setup",
+            {
+                "organization_name": "Credit Rewarded Chama",
+                "member_count": 8,
+                "group_type": "savings",
+                "user_role": "CHAMA_ADMIN",
+                "country": "Kenya",
+                "currency": "KES",
+                "referral_enabled": True,
+                "referral_code": referrer.referral_code,
+            },
+            format="json",
+        )
+        force_authenticate(group_setup_request, user=creator)
+        response = group_setup(group_setup_request)
+        self.assertEqual(response.status_code, 200)
+
+        complete_request = APIRequestFactory().post(
+            "/api/v1/chamas/wizard/complete",
+            {},
+            format="json",
+        )
+        force_authenticate(complete_request, user=creator)
+        complete_response = complete_wizard(complete_request)
+        self.assertEqual(complete_response.status_code, 200)
+
+        reward = ReferralReward.objects.get(referred_chama_id=response.data["chama_id"])
+        self.assertEqual(reward.status, ReferralReward.APPLIED)
+        self.assertEqual(reward.reward_type, ReferralReward.BILLING_CREDIT)
+        self.assertEqual(reward.reward_value, 1500)
+
+        credit = BillingCredit.objects.get(chama=referrer_chama)
+        self.assertEqual(credit.total_amount, 1500)
+        self.assertEqual(credit.remaining_amount, 1500)
+
+    def test_join_code_can_be_disabled_without_regenerating(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            phone="+254700000125",
+            password="testpass123",
+            full_name="Join Code Admin",
+        )
+        chama = Chama.objects.create(
+            name="Disable Join Code Chama",
+            created_by=admin,
+            updated_by=admin,
+        )
+        Membership.objects.create(
+            user=admin,
+            chama=chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=admin,
+            approved_at=chama.created_at,
+            created_by=admin,
+            updated_by=admin,
+        )
+        original_code = chama.join_code
+
+        request = APIRequestFactory().delete(f"/api/v1/chamas/{chama.id}/join-code/")
+        force_authenticate(request, user=admin)
+        response = JoinCodeEnableDisableView.as_view()(request, id=chama.id)
+
+        self.assertEqual(response.status_code, 200)
+        chama.refresh_from_db()
+        self.assertFalse(chama.join_enabled)
+        self.assertEqual(chama.join_code, original_code)
+        self.assertIsNone(chama.join_code_expires_at)
+
+        validate_request = APIRequestFactory().get(
+            f"/api/v1/chamas/join-codes/validate/{original_code}/"
+        )
+        validate_response = JoinCodeValidateView.as_view()(
+            validate_request, code=original_code
+        )
+        self.assertEqual(validate_response.status_code, 404)
+
+    def test_join_code_join_rejects_when_member_limit_is_reached(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            phone="+254700000126",
+            password="testpass123",
+            full_name="Capacity Admin",
+        )
+        joiner = user_model.objects.create_user(
+            phone="+254700000127",
+            password="testpass123",
+            full_name="Capacity Joiner",
+            phone_verified=True,
+        )
+        chama = Chama.objects.create(
+            name="Capacity Limit Chama",
+            join_mode="auto_join",
+            max_members=1,
+            created_by=admin,
+            updated_by=admin,
+        )
+        Membership.objects.create(
+            user=admin,
+            chama=chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=admin,
+            approved_at=chama.created_at,
+            created_by=admin,
+            updated_by=admin,
+        )
+
+        request = APIRequestFactory().post(
+            f"/api/v1/chamas/join-codes/{chama.join_code}/join/",
+            {},
+            format="json",
+        )
+        force_authenticate(request, user=joiner)
+        response = JoinCodeJoinView.as_view()(request, code=chama.join_code)
+
+        self.assertEqual(response.status_code, 402)
+        self.assertIn("member limit", response.data["detail"])
+
+    def test_invite_join_records_request_source_and_invite_link(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            phone="+254700000128",
+            password="testpass123",
+            full_name="Invite Admin",
+        )
+        joiner = user_model.objects.create_user(
+            phone="+254700000129",
+            password="testpass123",
+            full_name="Invite Joiner",
+            phone_verified=True,
+        )
+        chama = Chama.objects.create(
+            name="Invite Source Chama",
+            created_by=admin,
+            updated_by=admin,
+        )
+        Membership.objects.create(
+            user=admin,
+            chama=chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=admin,
+            approved_at=chama.created_at,
+            created_by=admin,
+            updated_by=admin,
+        )
+        invite_link = InviteLink.objects.create(
+            chama=chama,
+            created_by=admin,
+            approval_required=True,
+            max_uses=1,
+            expires_at=chama.created_at + timedelta(days=2),
+            preassigned_role=MembershipRole.MEMBER,
+            updated_by=admin,
+        )
+
+        request = APIRequestFactory().post(
+            f"/api/v1/chamas/invites/{invite_link.build_presented_token()}/join/",
+            {},
+            format="json",
+        )
+        force_authenticate(request, user=joiner)
+        response = InviteJoinView.as_view()(
+            request,
+            token=invite_link.build_presented_token(),
+        )
+
+        self.assertEqual(response.status_code, 201)
+        membership_request = MembershipRequest.objects.get(user=joiner, chama=chama)
+        self.assertEqual(membership_request.requested_via, MembershipRequestSource.INVITE_LINK)
+        self.assertEqual(membership_request.invite_link_id, invite_link.id)
+
+    def test_secretary_invite_to_privileged_role_defaults_to_member(self):
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(
+            phone="+254700000130",
+            password="testpass123",
+            full_name="Chama Owner",
+        )
+        secretary = user_model.objects.create_user(
+            phone="+254700000131",
+            password="testpass123",
+            full_name="Chama Secretary",
+        )
+        chama = Chama.objects.create(
+            name="Secretary Invite Chama",
+            created_by=owner,
+            updated_by=owner,
+        )
+        Membership.objects.create(
+            user=owner,
+            chama=chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=owner,
+            approved_at=chama.created_at,
+            created_by=owner,
+            updated_by=owner,
+        )
+        Membership.objects.create(
+            user=secretary,
+            chama=chama,
+            role=MembershipRole.SECRETARY,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=owner,
+            approved_at=chama.created_at,
+            created_by=owner,
+            updated_by=owner,
+        )
+
+        request = APIRequestFactory().post(
+            f"/api/v1/chamas/{chama.id}/invite-links/",
+            {
+                "preassigned_role": MembershipRole.TREASURER,
+                "approval_required": True,
+                "expires_in_days": 2,
+                "max_uses": 1,
+            },
+            format="json",
+        )
+        force_authenticate(request, user=secretary)
+        response = InviteLinkListCreateView.as_view()(request, id=chama.id)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["role"], MembershipRole.MEMBER)
+        self.assertIn(".", response.data["token"])
+        created_link = InviteLink.objects.get(id=response.data["id"])
+        self.assertTrue(created_link.requires_signature)
+        self.assertNotEqual(response.data["token"], created_link.token)
+
+    def test_signed_invite_link_rejects_raw_public_token(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            phone="+254700000132",
+            password="testpass123",
+            full_name="Signed Invite Admin",
+        )
+        chama = Chama.objects.create(
+            name="Signed Invite Chama",
+            created_by=admin,
+            updated_by=admin,
+        )
+        invite_link = InviteLink.objects.create(
+            chama=chama,
+            created_by=admin,
+            approval_required=True,
+            expires_at=chama.created_at + timedelta(days=2),
+            updated_by=admin,
+        )
+
+        raw_request = APIRequestFactory().get(
+            f"/api/v1/invites/lookup?token={invite_link.token}"
+        )
+        raw_response = InviteLookupAliasView.as_view()(raw_request)
+        self.assertEqual(raw_response.status_code, 404)
+
+        signed_request = APIRequestFactory().get(
+            f"/api/v1/invites/lookup?token={invite_link.build_presented_token()}"
+        )
+        signed_response = InviteLookupAliasView.as_view()(signed_request)
+        self.assertEqual(signed_response.status_code, 200)
+        self.assertEqual(signed_response.data["token"], invite_link.build_presented_token())
+
+    @override_settings(JOIN_CODE_VALIDATE_RATE_LIMIT=(1, 60))
+    def test_join_code_validate_is_rate_limited(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            phone="+254700000133",
+            password="testpass123",
+            full_name="Rate Limit Admin",
+        )
+        chama = Chama.objects.create(
+            name="Rate Limited Join Code Chama",
+            created_by=admin,
+            updated_by=admin,
+        )
+
+        first_request = APIRequestFactory().get(
+            f"/api/v1/chamas/join-codes/validate/{chama.join_code}/"
+        )
+        first_response = JoinCodeValidateView.as_view()(first_request, code=chama.join_code)
+        self.assertEqual(first_response.status_code, 200)
+
+        second_request = APIRequestFactory().get(
+            f"/api/v1/chamas/join-codes/validate/{chama.join_code}/"
+        )
+        second_response = JoinCodeValidateView.as_view()(second_request, code=chama.join_code)
+        self.assertEqual(second_response.status_code, 429)
+
+    def test_join_code_alias_and_invite_accept_alias_work(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            phone="+254700000134",
+            password="testpass123",
+            full_name="Alias Admin",
+        )
+        joiner = user_model.objects.create_user(
+            phone="+254700000135",
+            password="testpass123",
+            full_name="Alias Joiner",
+            phone_verified=True,
+        )
+        chama = Chama.objects.create(
+            name="Alias Chama",
+            join_mode="auto_join",
+            created_by=admin,
+            updated_by=admin,
+        )
+        Membership.objects.create(
+            user=admin,
+            chama=chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            approved_by=admin,
+            approved_at=chama.created_at,
+            created_by=admin,
+            updated_by=admin,
+        )
+        invite_link = InviteLink.objects.create(
+            chama=chama,
+            created_by=admin,
+            approval_required=False,
+            max_uses=1,
+            expires_at=chama.created_at + timedelta(days=2),
+            updated_by=admin,
+        )
+
+        validate_request = APIRequestFactory().post(
+            "/api/v1/chamas/join-code/validate",
+            {"join_code": chama.join_code},
+            format="json",
+        )
+        validate_response = JoinCodeValidateAliasView.as_view()(validate_request)
+        self.assertEqual(validate_response.status_code, 200)
+
+        join_request = APIRequestFactory().post(
+            "/api/v1/chamas/join",
+            {"join_code": chama.join_code},
+            format="json",
+        )
+        force_authenticate(join_request, user=joiner)
+        join_response = JoinCodeJoinAliasView.as_view()(join_request)
+        self.assertEqual(join_response.status_code, 201)
+
+        another_joiner = user_model.objects.create_user(
+            phone="+254700000136",
+            password="testpass123",
+            full_name="Alias Invite Joiner",
+            phone_verified=True,
+        )
+        accept_request = APIRequestFactory().post(
+            "/api/v1/invites/accept",
+            {"token": invite_link.build_presented_token()},
+            format="json",
+        )
+        force_authenticate(accept_request, user=another_joiner)
+        accept_response = InviteAcceptAliasView.as_view()(accept_request)
+        self.assertEqual(accept_response.status_code, 201)

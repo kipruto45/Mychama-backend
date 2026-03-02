@@ -1,0 +1,144 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Digital Chama System Monitoring",
+    "tags": ["digital-chama", "production"],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"digital-chama\"}",
+            "legendFormat": "Service Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "digital_chama_cpu_usage_percent",
+            "legendFormat": "CPU %"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "digital_chama_memory_usage_percent",
+            "legendFormat": "Memory %"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Disk Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "digital_chama_disk_usage_percent",
+            "legendFormat": "Disk %"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Users (30 days)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "digital_chama_total_users",
+            "legendFormat": "Total Users"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Active Chamas",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "digital_chama_active_chamas",
+            "legendFormat": "Active Chamas"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Recent Contributions (24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(digital_chama_recent_contributions[24h])",
+            "legendFormat": "Contributions"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Recent Loans (24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(digital_chama_recent_loans[24h])",
+            "legendFormat": "Loans"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "http_request_duration_seconds{quantile=\"0.95\"}",
+            "legendFormat": "95th percentile"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

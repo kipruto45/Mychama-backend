@@ -1,0 +1,3 @@
+USER TABLE: accounts_user
+RAW DELETE executed
+Remaining users: 0

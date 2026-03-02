@@ -1,0 +1,990 @@
+{
+  "info": {
+    "name": "Digital Chama API",
+    "description": "Postman Collection for Digital Chama - A savings group management system API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "chama_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+254700000001\",\n    \"password\": \"superadmin123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+254700000099\",\n    \"password\": \"TestPass123!\",\n    \"full_name\": \"Test User\",\n    \"email\": \"test@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/me",
+            "header": []
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/change-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"old_password\": \"superadmin123\",\n    \"new_password\": \"newpassword123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Request Password Reset",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/password-reset/request",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+254700000001\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chama (Groups)",
+      "item": [
+        {
+          "name": "List Chamas",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chamas/",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Chama",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chamas/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Test Chama\",\n    \"join_code\": \"TEST2024\",\n    \"description\": \"A test chama group\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Chama Details",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chamas/{{chama_id}}/",
+            "header": []
+          }
+        },
+        {
+          "name": "Request Join Chama",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chamas/{{chama_id}}/request-join",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "List Chama Members",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chamas/{{chama_id}}/members",
+            "header": []
+          }
+        },
+        {
+          "name": "List Membership Requests",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chamas/{{chama_id}}/membership-requests",
+            "header": []
+          }
+        },
+        {
+          "name": "Approve Membership Request",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chamas/{{chama_id}}/membership-requests/{{user_id}}/approve",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Reject Membership Request",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chamas/{{chama_id}}/membership-requests/{{user_id}}/reject",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Create Invite Link",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chamas/{{chama_id}}/invite-links",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"expires_in_days\": 7,\n    \"max_uses\": 10\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finance",
+      "item": [
+        {
+          "name": "Get Wallet Balance",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/wallet",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Wallet Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/wallet/summary",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Credit Score",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/credit-score",
+            "header": []
+          }
+        },
+        {
+          "name": "List Loans",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/loans/",
+            "header": []
+          }
+        },
+        {
+          "name": "Check Loan Eligibility",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/loans/eligibility",
+            "header": []
+          }
+        },
+        {
+          "name": "Request Loan",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/loans/request",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 10000,\n    \"purpose\": \"Business\",\n    \"loan_policy_id\": \"{{loan_policy_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Loan Schedule",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/loans/{{loan_id}}/schedule",
+            "header": []
+          }
+        },
+        {
+          "name": "Repay Loan (STK)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/loans/{{loan_id}}/repay",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 5000,\n    \"phone\": \"+254700000001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Loan Policies",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/loan-policies/",
+            "header": []
+          }
+        },
+        {
+          "name": "List Contribution Types",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/contribution-types/",
+            "header": []
+          }
+        },
+        {
+          "name": "Record Contribution",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/contributions/record",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 5000,\n    \"contribution_type_id\": \"{{contribution_type_id}}\",\n    \"chama_id\": \"{{chama_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/dashboard",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Loan Portfolio",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/loan-portfolio",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Statement",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/statement",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Ledger",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/ledger",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initiate STK Deposit",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/payments/deposit/stk/initiate",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+254700000001\",\n    \"amount\": 1000\n}"
+            }
+          }
+        },
+        {
+          "name": "My Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/payments/my/transactions",
+            "header": []
+          }
+        },
+        {
+          "name": "Request Withdrawal",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/payments/withdraw/request",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 500,\n    \"phone\": \"+254700000001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Admin List Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/payments/admin/transactions",
+            "header": []
+          }
+        },
+        {
+          "name": "List Refunds",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/payments/refunds",
+            "header": []
+          }
+        },
+        {
+          "name": "Request Refund",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/payments/refunds/request",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"transaction_id\": \"{{transaction_id}}\",\n    \"amount\": 100,\n    \"reason\": \"Wrong amount\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Disputes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/payments/disputes",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Meetings",
+      "item": [
+        {
+          "name": "List Meetings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/meetings/",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Meeting",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/meetings/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Monthly Meeting\",\n    \"scheduled_at\": \"2024-12-01T10:00:00Z\",\n    \"chama_id\": \"{{chama_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Meeting Details",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/meetings/{{meeting_id}}/",
+            "header": []
+          }
+        },
+        {
+          "name": "Mark Attendance",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/meetings/{{meeting_id}}/attendance/mark",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"present\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Meeting Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/meetings/{{meeting_id}}/summary",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Meeting Agenda",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/meetings/{{meeting_id}}/agenda",
+            "header": []
+          }
+        },
+        {
+          "name": "Submit Meeting Vote",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/meetings/{{meeting_id}}/votes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"agenda_item_id\": \"{{agenda_item_id}}\",\n    \"vote\": \"yes\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Action Items Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/meetings/action-items/dashboard",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications (Inbox)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/notifications/",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/notifications/unread-count",
+            "header": []
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/notifications/read-all",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Notification Preferences",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/notifications/preferences",
+            "header": []
+          }
+        },
+        {
+          "name": "Update Notification Preferences",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/notifications/preferences",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email_enabled\": true,\n    \"sms_enabled\": true,\n    \"push_enabled\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Broadcast",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/notifications/broadcast",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"chama_id\": \"{{chama_id}}\",\n    \"title\": \"Important Notice\",\n    \"message\": \"This is a test notification\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Device Token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/notifications/devices/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"device_token_here\",\n    \"device_type\": \"android\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Test Notification",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/notifications/test-send",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Member Statement",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/member-statement",
+            "header": []
+          }
+        },
+        {
+          "name": "Loan Statement",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/loan-statement",
+            "header": []
+          }
+        },
+        {
+          "name": "Chama Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/chama-summary",
+            "header": []
+          }
+        },
+        {
+          "name": "Loan Monthly Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/loan-monthly-summary",
+            "header": []
+          }
+        },
+        {
+          "name": "Loan Schedule",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/loan-schedule",
+            "header": []
+          }
+        },
+        {
+          "name": "Chama Health Score",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/chama-health",
+            "header": []
+          }
+        },
+        {
+          "name": "Collection Forecast",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/collection-forecast",
+            "header": []
+          }
+        },
+        {
+          "name": "Defaulter Risk",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/defaulter-risk",
+            "header": []
+          }
+        },
+        {
+          "name": "Cohort Analysis",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/cohort-analysis",
+            "header": []
+          }
+        },
+        {
+          "name": "List Report Runs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/runs",
+            "header": []
+          }
+        },
+        {
+          "name": "Request Report",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/reports/request/",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"report_type\": \"member_statement\",\n    \"chama_id\": \"{{chama_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "My Reports",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/reports/my/",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI (Insights)",
+      "item": [
+        {
+          "name": "AI Chat",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/chat",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"message\": \"What is my current loan status?\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AI Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/status",
+            "header": []
+          }
+        },
+        {
+          "name": "Membership Risk Scoring",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/membership-risk-scoring",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"chama_id\": {{chama_id}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Loan Default Prediction",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/loan-default-prediction",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"loan_id\": \"{{loan_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Issue Triage",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/issue-triage",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"issue_id\": \"{{issue_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Meeting Summarize",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/meeting-summarize",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"meeting_id\": \"{{meeting_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Risk Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/risk-profile/{{chama_id}}/",
+            "header": []
+          }
+        },
+        {
+          "name": "Loan Eligibility AI",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/loan-eligibility/{{chama_id}}/",
+            "header": []
+          }
+        },
+        {
+          "name": "Insights",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/insights/{{chama_id}}/",
+            "header": []
+          }
+        },
+        {
+          "name": "Fraud Flags",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/fraud-flags/{{chama_id}}/",
+            "header": []
+          }
+        },
+        {
+          "name": "Fraud Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/fraud-check/{{chama_id}}/",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/health",
+            "header": []
+          }
+        },
+        {
+          "name": "API Schema",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/schema/",
+            "header": []
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/schema/swagger-ui/",
+            "header": []
+          }
+        }
+      ]
+    }
+  ]
+}

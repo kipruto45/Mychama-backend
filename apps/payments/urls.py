@@ -1,0 +1,186 @@
+from django.urls import path
+
+from apps.payments.views import (
+    AdminRegisterC2BUrlsView,
+    AdminTransactionsView,
+    B2CResultCallbackView,
+    B2CTimeoutCallbackView,
+    C2BConfirmationCallbackView,
+    C2BValidationCallbackView,
+    DepositC2BIntentView,
+    DepositSTKInitiateView,
+    InitiateMpesaPaymentView,
+    LoanDisbursementApproveView,
+    LoanDisbursementRejectView,
+    LoanDisbursementSendView,
+    PaymentDisputeListCreateView,
+    PaymentDisputeResolveView,
+    LoanRepaymentC2BIntentView,
+    LoanRepaymentStatusView,
+    LoanRepaymentSTKInitiateView,
+    MpesaCallbackLogListView,
+    MpesaCallbackView,
+    MpesaTransactionDetailView,
+    MpesaTransactionListView,
+    MyTransactionsView,
+    PaymentIntentActivityLogView,
+    PaymentAllocationRuleView,
+    PendingLoanDisbursementListView,
+    ReconciliationRunsView,
+    RefundApproveView,
+    RefundListView,
+    RefundProcessView,
+    RefundRequestView,
+    SplitPaymentC2BIntentView,
+    SplitPaymentSTKInitiateView,
+    STKCallbackV2View,
+    UssdCallbackView,
+    WithdrawalApproveView,
+    WithdrawalRequestView,
+    WithdrawalSendView,
+)
+
+app_name = "payments"
+
+urlpatterns = [
+    # New enterprise endpoints.
+    path("deposit/stk/initiate", DepositSTKInitiateView.as_view(), name="deposit-stk-initiate"),
+    path("deposit/c2b/intent", DepositC2BIntentView.as_view(), name="deposit-c2b-intent"),
+    path(
+        "split/stk/initiate",
+        SplitPaymentSTKInitiateView.as_view(),
+        name="split-stk-initiate",
+    ),
+    path(
+        "split/c2b/intent",
+        SplitPaymentC2BIntentView.as_view(),
+        name="split-c2b-intent",
+    ),
+    path(
+        "allocation-rule",
+        PaymentAllocationRuleView.as_view(),
+        name="allocation-rule",
+    ),
+    path(
+        "loans/<uuid:loan_id>/repay/stk/initiate",
+        LoanRepaymentSTKInitiateView.as_view(),
+        name="loan-repay-stk-initiate",
+    ),
+    path(
+        "loans/<uuid:loan_id>/repay/c2b/intent",
+        LoanRepaymentC2BIntentView.as_view(),
+        name="loan-repay-c2b-intent",
+    ),
+    path(
+        "loans/<uuid:loan_id>/repayment-status",
+        LoanRepaymentStatusView.as_view(),
+        name="loan-repayment-status",
+    ),
+    path("my/transactions", MyTransactionsView.as_view(), name="my-transactions"),
+    path("withdraw/request", WithdrawalRequestView.as_view(), name="withdraw-request"),
+    path("withdraw/request", WithdrawalRequestView.as_view(), name="withdrawal-create"),
+    path(
+        "withdraw/<uuid:intent_id>/approve",
+        WithdrawalApproveView.as_view(),
+        name="withdraw-approve",
+    ),
+    path(
+        "withdraw/<uuid:intent_id>/send",
+        WithdrawalSendView.as_view(),
+        name="withdraw-send",
+    ),
+    path(
+        "loan-disbursements/pending",
+        PendingLoanDisbursementListView.as_view(),
+        name="loan-disbursement-pending",
+    ),
+    path(
+        "loan-disbursements/<uuid:intent_id>/approve",
+        LoanDisbursementApproveView.as_view(),
+        name="loan-disbursement-approve",
+    ),
+    path(
+        "loan-disbursements/<uuid:intent_id>/send",
+        LoanDisbursementSendView.as_view(),
+        name="loan-disbursement-send",
+    ),
+    path(
+        "loan-disbursements/<uuid:intent_id>/reject",
+        LoanDisbursementRejectView.as_view(),
+        name="loan-disbursement-reject",
+    ),
+    path("admin/transactions", AdminTransactionsView.as_view(), name="admin-transactions"),
+    path("refunds/request", RefundRequestView.as_view(), name="refund-request"),
+    path("refunds", RefundListView.as_view(), name="refund-list"),
+    path(
+        "refunds/<uuid:refund_id>/approve",
+        RefundApproveView.as_view(),
+        name="refund-approve",
+    ),
+    path(
+        "refunds/<uuid:refund_id>/process",
+        RefundProcessView.as_view(),
+        name="refund-process",
+    ),
+    path("disputes", PaymentDisputeListCreateView.as_view(), name="dispute-list-create"),
+    path(
+        "disputes/<uuid:dispute_id>/resolve",
+        PaymentDisputeResolveView.as_view(),
+        name="dispute-resolve",
+    ),
+    path(
+        "admin/register-c2b-urls",
+        AdminRegisterC2BUrlsView.as_view(),
+        name="admin-register-c2b-urls",
+    ),
+    path(
+        "intents/<uuid:intent_id>/activity",
+        PaymentIntentActivityLogView.as_view(),
+        name="intent-activity",
+    ),
+    path("reconciliation/runs", ReconciliationRunsView.as_view(), name="reconciliation-runs"),
+    path(
+        "callbacks/c2b/validation",
+        C2BValidationCallbackView.as_view(),
+        name="callbacks-c2b-validation",
+    ),
+    path(
+        "callbacks/c2b/confirmation",
+        C2BConfirmationCallbackView.as_view(),
+        name="callbacks-c2b-confirmation",
+    ),
+    path("callbacks/stk", STKCallbackV2View.as_view(), name="callbacks-stk"),
+    path("callbacks/b2c/result", B2CResultCallbackView.as_view(), name="callbacks-b2c-result"),
+    path(
+        "callbacks/b2c/timeout",
+        B2CTimeoutCallbackView.as_view(),
+        name="callbacks-b2c-timeout",
+    ),
+    path("ussd/callback", UssdCallbackView.as_view(), name="ussd-callback"),
+
+    # Legacy endpoints retained.
+    path(
+        "mpesa/transactions",
+        MpesaTransactionListView.as_view(),
+        name="mpesa-transaction-list-query",
+    ),
+    path("mpesa/stk-push", InitiateMpesaPaymentView.as_view(), name="mpesa-stk-push"),
+    path("mpesa/callback", MpesaCallbackView.as_view(), name="mpesa-callback-v2"),
+    path(
+        "<uuid:chama_id>/transactions",
+        MpesaTransactionListView.as_view(),
+        name="mpesa-transaction-list",
+    ),
+    path(
+        "<uuid:chama_id>/transactions/<uuid:id>",
+        MpesaTransactionDetailView.as_view(),
+        name="mpesa-transaction-detail",
+    ),
+    path("<uuid:chama_id>/initiate", InitiateMpesaPaymentView.as_view(), name="mpesa-initiate"),
+    path(
+        "<uuid:chama_id>/callback-logs",
+        MpesaCallbackLogListView.as_view(),
+        name="mpesa-callback-logs",
+    ),
+    path("callback", MpesaCallbackView.as_view(), name="mpesa-callback"),
+]

@@ -1,0 +1,141 @@
+from django.urls import path
+
+from apps.finance.views import (
+    ContributionGoalDetailView,
+    ContributionGoalListCreateView,
+    ContributionListView,
+    ContributionRecordView,
+    ContributionTypeDetailView,
+    ContributionTypeListCreateView,
+    CreditScoreView,
+    DashboardView,
+    LedgerReverseView,
+    LedgerView,
+    LoanApprovalLogListView,
+    LoanApproveView,
+    LoanDisburseView,
+    LoanEligibilityView,
+    LoanGuarantorListCreateView,
+    LoanListView,
+    LoanNextDueView,
+    LoanPolicyDetailView,
+    LoanPolicyListCreateView,
+    LoanPortfolioView,
+    LoanRejectView,
+    LoanRepayView,
+    LoanRestructureRequestView,
+    LoanRestructureReviewView,
+    LoanRequestView,
+    LoanReviewView,
+    LoanScheduleView,
+    LoanTopUpRequestView,
+    LoanTopUpReviewView,
+    ManualAdjustmentView,
+    MonthCloseListView,
+    MonthCloseView,
+    MonthlyAggregatesView,
+    PenaltyIssueView,
+    PenaltyMarkPaidView,
+    PenaltyWaiveView,
+    StatementView,
+    WalletBalanceView,
+    WalletSummaryView,
+)
+
+app_name = "finance"
+
+urlpatterns = [
+    path(
+        "loan-policies/",
+        LoanPolicyListCreateView.as_view(),
+        name="loan-policy-list",
+    ),
+    path(
+        "loan-policies/<uuid:id>/",
+        LoanPolicyDetailView.as_view(),
+        name="loan-policy-detail",
+    ),
+    path(
+        "contribution-types/",
+        ContributionTypeListCreateView.as_view(),
+        name="contribution-type-list",
+    ),
+    path(
+        "contribution-types/<uuid:id>/",
+        ContributionTypeDetailView.as_view(),
+        name="contribution-type-detail",
+    ),
+    path(
+        "contributions/",
+        ContributionListView.as_view(),
+        name="contribution-list",
+    ),
+    path(
+        "contributions/record",
+        ContributionRecordView.as_view(),
+        name="contribution-record",
+    ),
+    path("contribution-goals/", ContributionGoalListCreateView.as_view(), name="contribution-goals"),
+    path(
+        "contribution-goals/<uuid:id>/",
+        ContributionGoalDetailView.as_view(),
+        name="contribution-goal-detail",
+    ),
+    path("wallet", WalletBalanceView.as_view(), name="wallet-balance"),
+    path("wallet/summary", WalletSummaryView.as_view(), name="wallet-summary"),
+    path("credit-score", CreditScoreView.as_view(), name="credit-score"),
+    path("loans/", LoanListView.as_view(), name="loan-list"),
+    path("loans/eligibility", LoanEligibilityView.as_view(), name="loan-eligibility"),
+    path("loans/request", LoanRequestView.as_view(), name="loan-request"),
+    path(
+        "loans/<uuid:id>/guarantors",
+        LoanGuarantorListCreateView.as_view(),
+        name="loan-guarantors",
+    ),
+    path("loans/<uuid:id>/review", LoanReviewView.as_view(), name="loan-review"),
+    path("loans/<uuid:id>/approve", LoanApproveView.as_view(), name="loan-approve"),
+    path("loans/<uuid:id>/reject", LoanRejectView.as_view(), name="loan-reject"),
+    path("loans/<uuid:id>/disburse", LoanDisburseView.as_view(), name="loan-disburse"),
+    path("loans/<uuid:id>/repay", LoanRepayView.as_view(), name="loan-repay"),
+    path("loans/<uuid:id>/topup/request", LoanTopUpRequestView.as_view(), name="loan-topup-request"),
+    path("loans/topups/<uuid:id>/review", LoanTopUpReviewView.as_view(), name="loan-topup-review"),
+    path(
+        "loans/<uuid:id>/restructure/request",
+        LoanRestructureRequestView.as_view(),
+        name="loan-restructure-request",
+    ),
+    path(
+        "loans/restructures/<uuid:id>/review",
+        LoanRestructureReviewView.as_view(),
+        name="loan-restructure-review",
+    ),
+    path("loans/<uuid:id>/schedule", LoanScheduleView.as_view(), name="loan-schedule"),
+    path("loans/<uuid:id>/next-due", LoanNextDueView.as_view(), name="loan-next-due"),
+    path(
+        "loans/<uuid:id>/approvals",
+        LoanApprovalLogListView.as_view(),
+        name="loan-approvals",
+    ),
+    path("penalties/issue", PenaltyIssueView.as_view(), name="penalty-issue"),
+    path(
+        "penalties/<uuid:id>/mark-paid",
+        PenaltyMarkPaidView.as_view(),
+        name="penalty-mark-paid",
+    ),
+    path("penalties/<uuid:id>/waive", PenaltyWaiveView.as_view(), name="penalty-waive"),
+    path("ledger", LedgerView.as_view(), name="ledger"),
+    path(
+        "ledger/<uuid:id>/reverse", LedgerReverseView.as_view(), name="ledger-reverse"
+    ),
+    path("dashboard", DashboardView.as_view(), name="dashboard"),
+    path("loan-portfolio", LoanPortfolioView.as_view(), name="loan-portfolio"),
+    path("statement", StatementView.as_view(), name="statement"),
+    path(
+        "monthly-aggregates", MonthlyAggregatesView.as_view(), name="monthly-aggregates"
+    ),
+    path(
+        "adjustments/manual", ManualAdjustmentView.as_view(), name="manual-adjustment"
+    ),
+    path("month-close", MonthCloseView.as_view(), name="month-close"),
+    path("month-close/list", MonthCloseListView.as_view(), name="month-close-list"),
+]

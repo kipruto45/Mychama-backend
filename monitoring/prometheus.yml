@@ -1,0 +1,59 @@
+# Prometheus Configuration for Digital Chama System
+# This configuration scrapes metrics from the Django application and system
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Digital Chama Application
+  - job_name: 'digital-chama'
+    static_configs:
+      - targets: ['web:8000']  # Django application
+    metrics_path: '/health/metrics/'
+    scrape_interval: 30s
+
+  # Nginx Web Server
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    scrape_interval: 30s
+
+  # PostgreSQL Database
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+
+  # Redis Cache
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # Node Exporter (System metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Celery Worker (if using celery-exporter)
+  - job_name: 'celery'
+    static_configs:
+      - targets: ['worker:5555']
+    scrape_interval: 30s
+
+# Alerting configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+# rule_files:
+#   - "alert_rules.yml"
