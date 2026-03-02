@@ -27,7 +27,7 @@ psutil==6.1.1
 # Notification services
 africastalking==1.2.7
 twilio==9.3.6
-sendgrid==6.11.0
+sendgrid==6.12.5
 firebase-admin==6.5.0
 # additional Firebase libraries
 google-cloud-firestore<3,>=2.23.0
