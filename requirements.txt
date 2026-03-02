@@ -37,7 +37,7 @@ pyrebase4==4.5.0
 # Quality tooling
 pytest==8.3.3
 pytest-django==4.9.0
-ruff==0.7.1
+ruff==0.15.4
 black==24.10.0
 isort==5.13.2
 pre-commit==4.0.1
