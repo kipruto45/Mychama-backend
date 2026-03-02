@@ -31,7 +31,7 @@ sendgrid==6.11.0
 firebase-admin==6.5.0
 # additional Firebase libraries
 google-cloud-firestore<3,>=2.23.0
-pyrebase4==4.5.0
+pyrebase4==4.9.0
 
 
 # Quality tooling
