@@ -54,7 +54,7 @@ posthog>=3.0
 drf-spectacular>=0.28
 
 # Testing
-pytest>=8.2
+pytest>=9.0.3
 pytest-django>=4.8
 pytest-cov>=5.0
 factory-boy>=3.3
