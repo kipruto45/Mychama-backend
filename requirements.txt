@@ -57,7 +57,7 @@ drf-spectacular>=0.28
 pytest>=8.2
 pytest-django>=4.8
 pytest-cov>=5.0
-factory-boy>=3.3
+factory-boy>=3.3.3
 faker>=25.0
 
 # Code Quality
