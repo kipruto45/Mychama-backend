@@ -371,25 +371,11 @@ class PayoutServiceTestCase(TestCase):
         payout = PayoutService.treasurer_approve(payout.id, self.treasurer_user.id)
         payout = PayoutService.chairperson_approve(payout.id, self.chairperson_user.id)
 
-        # Simulate wallet payout completion
-        from apps.payments.unified_models import PaymentMethod
-        from apps.payments.unified_payment_service import UnifiedPaymentService
+        payout.payout_method = "wallet"
+        payout.save(update_fields=["payout_method", "updated_at"])
 
-        payment_intent = UnifiedPaymentService.create_payment_intent(
-            chama=self.chama,
-            user=self.member_user,
-            amount=payout.amount,
-            payment_method=PaymentMethod.CASH,
-            purpose="other",
-            purpose_id=payout.id,
-            description="Payout",
-        )
-
-        payout.payment_intent = payment_intent
-        payout.save()
-
-        # Handle success
-        payout = PayoutService.handle_payment_success(payment_intent.id)
+        PayoutService.initiate_payment(payout.id)
+        payout.refresh_from_db()
 
         self.assertEqual(payout.status, PayoutStatus.SUCCESS)
         self.assertIsNotNone(payout.payment_completed_at)
@@ -409,21 +395,30 @@ class PayoutServiceTestCase(TestCase):
         payout = PayoutService.treasurer_approve(payout.id, self.treasurer_user.id)
         payout = PayoutService.chairperson_approve(payout.id, self.chairperson_user.id)
 
-        from apps.payments.unified_payment_service import UnifiedPaymentService
-        from apps.payments.unified_models import PaymentMethod
+        from apps.payments.unified_models import PaymentIntent, PaymentMethod, PaymentPurpose, PaymentStatus
 
-        payment_intent = UnifiedPaymentService.create_payment_intent(
+        payout.payout_method = "mpesa"
+        payout.save(update_fields=["payout_method", "updated_at"])
+        PayoutService._lock_chama_wallet_for_external_payout(payout=payout)
+
+        payment_intent = PaymentIntent.objects.create(
             chama=self.chama,
             user=self.member_user,
             amount=payout.amount,
-            payment_method=PaymentMethod.MPESA,
-            purpose="other",
+            currency="KES",
+            purpose=PaymentPurpose.OTHER,
             purpose_id=payout.id,
             description="Payout",
+            payment_method=PaymentMethod.MPESA,
+            phone=self.member_user.phone,
+            provider="safaricom",
+            provider_intent_id="b2c_test_1",
+            status=PaymentStatus.PENDING,
+            idempotency_key=f"test-payout-failure:{payout.id}",
+            reference=f"PAYTEST-{payout.id.hex[:12].upper()}",
         )
-
         payout.payment_intent = payment_intent
-        payout.save()
+        payout.save(update_fields=["payment_intent", "updated_at"])
 
         # Handle failure
         payout = PayoutService.handle_payment_failure(
@@ -462,23 +457,9 @@ class PayoutServiceTestCase(TestCase):
         payout = PayoutService.treasurer_approve(payout.id, self.treasurer_user.id)
         payout = PayoutService.chairperson_approve(payout.id, self.chairperson_user.id)
 
-        from apps.payments.unified_payment_service import UnifiedPaymentService
-        from apps.payments.unified_models import PaymentMethod
-
-        payment_intent = UnifiedPaymentService.create_payment_intent(
-            chama=self.chama,
-            user=self.member_user,
-            amount=payout.amount,
-            payment_method=PaymentMethod.CASH,
-            purpose="other",
-            purpose_id=payout.id,
-            description="Payout",
-        )
-
-        payout.payment_intent = payment_intent
-        payout.save()
-
-        PayoutService.handle_payment_success(payment_intent.id)
+        payout.payout_method = "wallet"
+        payout.save(update_fields=["payout_method", "updated_at"])
+        PayoutService.initiate_payment(payout.id)
 
         self.rotation.refresh_from_db()
         self.assertEqual(self.rotation.current_position, initial_position + 1)

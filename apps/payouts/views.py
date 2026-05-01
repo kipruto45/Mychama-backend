@@ -290,6 +290,41 @@ class PayoutViewSet(viewsets.ModelViewSet):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsTreasurerOrAdmin])
+    def initiate_payment(self, request, pk=None):
+        """
+        Treasurer/Admin initiates payment for an approved payout.
+
+        POST /api/payouts/{id}/initiate_payment/
+        """
+        try:
+            payout = self.get_object()
+
+            membership = request.user.memberships.filter(
+                chama_id=payout.chama_id,
+                role__in=["TREASURER", "ADMIN", "CHAMA_ADMIN"],
+            ).first()
+            if not membership:
+                return ApiResponse.error(
+                    message="You must be a treasurer or admin to initiate payouts.",
+                    code="PERMISSION_DENIED",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+
+            PayoutService.initiate_payment(payout.id)
+            payout.refresh_from_db()
+            return ApiResponse.success(
+                data=PayoutDetailSerializer(payout).data,
+                message="Payout payment initiated",
+                status_code=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return ApiResponse.error(
+                message=str(e),
+                code="PAYMENT_INITIATION_ERROR",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsChamaAdmin])
     def chairperson_reject(self, request, pk=None):
         """

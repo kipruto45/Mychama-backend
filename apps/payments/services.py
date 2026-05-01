@@ -3386,11 +3386,40 @@ class PaymentWorkflowService:
                 actor = actor.user if actor else None
 
             try:
-                PaymentWorkflowService._post_intent_success(
-                    intent=intent,
-                    external_reference=reference,
-                    actor=actor,
-                )
+                metadata = dict(intent.metadata or {})
+                handled = False
+
+                if str(metadata.get("wallet_flow_kind") or "").strip().lower() == "withdrawal" and str(
+                    intent.provider or ""
+                ).strip() == "member_wallet_withdrawal":
+                    from apps.finance.member_wallet_workflow import (
+                        complete_member_wallet_withdrawal_from_b2c,
+                    )
+
+                    complete_member_wallet_withdrawal_from_b2c(
+                        intent=intent,
+                        provider_reference=reference,
+                        raw_response={"b2c_result": parsed},
+                    )
+                    handled = True
+
+                payout_id = metadata.get("payout_id") or metadata.get("payout")
+                if not handled and payout_id:
+                    from apps.payouts.services import PayoutService
+
+                    PayoutService.handle_payment_success(
+                        str(intent.id),
+                        provider_reference=reference,
+                        provider_name="safaricom",
+                    )
+                    handled = True
+
+                if not handled:
+                    PaymentWorkflowService._post_intent_success(
+                        intent=intent,
+                        external_reference=reference,
+                        actor=actor,
+                    )
                 payout.status = MpesaB2CStatus.SUCCESS
                 payout.processed_at = timezone.now()
             except PaymentWorkflowError as exc:
@@ -3400,10 +3429,31 @@ class PaymentWorkflowService:
         else:
             payout.status = MpesaB2CStatus.FAILED
             payout.processed_at = timezone.now()
-            PaymentWorkflowService._mark_failed(
-                intent,
-                reason=parsed["result_desc"] or "B2C payout failed",
-            )
+            metadata = dict(intent.metadata or {})
+            if str(metadata.get("wallet_flow_kind") or "").strip().lower() == "withdrawal" and str(
+                intent.provider or ""
+            ).strip() == "member_wallet_withdrawal":
+                from apps.finance.member_wallet_workflow import fail_member_wallet_withdrawal_from_b2c
+
+                fail_member_wallet_withdrawal_from_b2c(
+                    intent=intent,
+                    reason=parsed["result_desc"] or "B2C payout failed",
+                )
+            else:
+                payout_id = metadata.get("payout_id") or metadata.get("payout")
+                if payout_id:
+                    from apps.payouts.services import PayoutService
+
+                    PayoutService.handle_payment_failure(
+                        str(intent.id),
+                        failure_reason=parsed["result_desc"] or "B2C payout failed",
+                        failure_code="b2c_failed",
+                    )
+                else:
+                    PaymentWorkflowService._mark_failed(
+                        intent,
+                        reason=parsed["result_desc"] or "B2C payout failed",
+                    )
             if intent.intent_type == PaymentIntentType.LOAN_DISBURSEMENT:
                 Loan.objects.filter(
                     id=intent.reference_id,
@@ -3530,7 +3580,25 @@ class PaymentWorkflowService:
         payout.save(update_fields=["status", "raw_result", "processed_at", "updated_at"])
 
         intent = payout.intent
-        PaymentWorkflowService._mark_failed(intent, reason="B2C timeout")
+        metadata = dict(intent.metadata or {})
+        if str(metadata.get("wallet_flow_kind") or "").strip().lower() == "withdrawal" and str(
+            intent.provider or ""
+        ).strip() == "member_wallet_withdrawal":
+            from apps.finance.member_wallet_workflow import fail_member_wallet_withdrawal_from_b2c
+
+            fail_member_wallet_withdrawal_from_b2c(intent=intent, reason="B2C timeout")
+        else:
+            payout_id = metadata.get("payout_id") or metadata.get("payout")
+            if payout_id:
+                from apps.payouts.services import PayoutService
+
+                PayoutService.handle_payment_failure(
+                    str(intent.id),
+                    failure_reason="B2C timeout",
+                    failure_code="b2c_timeout",
+                )
+            else:
+                PaymentWorkflowService._mark_failed(intent, reason="B2C timeout")
         if intent.intent_type == PaymentIntentType.LOAN_DISBURSEMENT:
             Loan.objects.filter(
                 id=intent.reference_id,

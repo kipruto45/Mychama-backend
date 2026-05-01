@@ -8,6 +8,7 @@ payment processing, and notifications.
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
+from django.conf import settings
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -53,6 +54,162 @@ from .models import (
 
 class PayoutService:
     """Main service for managing payout workflow."""
+
+    @staticmethod
+    def _get_chama_wallet_for_update(*, chama, currency: str = "KES") -> Wallet:
+        wallet, _ = Wallet.objects.select_for_update().get_or_create(
+            owner_type=WalletOwnerType.CHAMA,
+            owner_id=str(chama.id),
+            defaults={
+                "available_balance": Decimal("0.00"),
+                "locked_balance": Decimal("0.00"),
+                "currency": currency,
+            },
+        )
+        return wallet
+
+    @staticmethod
+    def _lock_chama_wallet_for_external_payout(*, payout: Payout) -> None:
+        """
+        Move funds from `available_balance` to `locked_balance` for external payout methods.
+
+        This prevents double-spend while a provider transfer is pending.
+        """
+        if payout.payout_method == PayoutPaymentMethod.WALLET:
+            return
+
+        with transaction.atomic():
+            payout = Payout.objects.select_for_update().select_related("chama").get(id=payout.id)
+            meta = dict(payout.metadata or {})
+            if meta.get("wallet_lock_applied"):
+                return
+
+            wallet = PayoutService._get_chama_wallet_for_update(chama=payout.chama, currency=payout.currency or "KES")
+            amount = Decimal(str(payout.amount))
+            if amount <= Decimal("0.00"):
+                raise ValueError("Payout amount must be greater than zero.")
+            if wallet.available_balance < amount:
+                raise ValueError("Insufficient chama wallet balance for payout.")
+
+            wallet.available_balance = Decimal(str(wallet.available_balance)) - amount
+            wallet.locked_balance = Decimal(str(wallet.locked_balance)) + amount
+            wallet.save(update_fields=["available_balance", "locked_balance", "updated_at"])
+
+            meta["wallet_lock_applied"] = True
+            payout.metadata = meta
+            payout.save(update_fields=["metadata", "updated_at"])
+
+    @staticmethod
+    def _release_chama_wallet_lock(*, payout: Payout, restore_available: bool) -> None:
+        """
+        Release locked funds for a payout.
+
+        When `restore_available` is True, returns funds back to `available_balance` (failure path).
+        When False, only decreases `locked_balance` (success path; funds have left the wallet).
+        """
+        with transaction.atomic():
+            payout = Payout.objects.select_for_update().select_related("chama").get(id=payout.id)
+            meta = dict(payout.metadata or {})
+            if not meta.get("wallet_lock_applied") or meta.get("wallet_lock_released"):
+                return
+
+            wallet = PayoutService._get_chama_wallet_for_update(chama=payout.chama, currency=payout.currency or "KES")
+            amount = Decimal(str(payout.amount))
+            if amount > Decimal("0.00") and Decimal(str(wallet.locked_balance)) >= amount:
+                wallet.locked_balance = Decimal(str(wallet.locked_balance)) - amount
+                if restore_available:
+                    wallet.available_balance = Decimal(str(wallet.available_balance)) + amount
+                wallet.save(update_fields=["available_balance", "locked_balance", "updated_at"])
+
+            meta["wallet_lock_released"] = True
+            payout.metadata = meta
+            payout.save(update_fields=["metadata", "updated_at"])
+
+    @staticmethod
+    def _post_external_payout_ledger(
+        *,
+        payout: Payout,
+        provider_reference: str,
+        actor=None,
+    ) -> LedgerEntry:
+        """
+        Post an external payout ledger entry (debit chama wallet only).
+
+        External payouts leave the MyChama wallet system (e.g., M-Pesa B2C, bank transfer).
+        """
+        with transaction.atomic():
+            payout = Payout.objects.select_for_update().select_related("chama", "member__user").get(id=payout.id)
+            wallet = PayoutService._get_chama_wallet_for_update(chama=payout.chama, currency=payout.currency or "KES")
+            amount = Decimal(str(payout.amount))
+            idempotency_key = f"payout:{payout.id}:external:debit"
+            existing = LedgerEntry.objects.filter(chama=payout.chama, idempotency_key=idempotency_key).first()
+            if existing:
+                return existing
+
+            zero = Decimal("0.00")
+            return LedgerEntry.objects.create(
+                wallet=wallet,
+                chama=payout.chama,
+                entry_type=LedgerEntryType.PAYOUT,
+                direction=LedgerDirection.DEBIT,
+                amount=amount,
+                debit=amount,
+                credit=zero,
+                currency=payout.currency or wallet.currency or "KES",
+                status=LedgerStatus.SUCCESS,
+                provider=payout.payout_method,
+                provider_reference=str(provider_reference or "")[:120],
+                idempotency_key=idempotency_key,
+                narration=f"Payout to {getattr(payout.member.user, 'full_name', 'member')}.",
+                meta={
+                    "payout_id": str(payout.id),
+                    "member_id": str(getattr(payout.member.user, "id", "")),
+                    "member_phone": str(getattr(payout.member.user, "phone", "") or ""),
+                    "payout_method": payout.payout_method,
+                },
+                created_by=actor,
+                updated_by=actor,
+            )
+
+    @staticmethod
+    def _ensure_payment_receipt(
+        *,
+        intent: PaymentIntent,
+        provider_reference: str,
+        provider_name: str,
+        actor=None,
+        metadata: dict | None = None,
+    ) -> PaymentReceipt:
+        transaction_record = PaymentTransaction.objects.filter(payment_intent=intent).first()
+        if not transaction_record:
+            transaction_record = PaymentTransaction.objects.create(
+                payment_intent=intent,
+                provider=intent.payment_method,
+                reference=str(intent.reference or "")[:120],
+                provider_reference=str(provider_reference or "")[:120],
+                provider_name=str(provider_name or "")[:50],
+                payment_method=intent.payment_method,
+                amount=intent.amount,
+                currency=intent.currency or "KES",
+                status=TransactionStatus.VERIFIED,
+                payer_reference=getattr(intent.user, "phone", "") if intent.user else "",
+                raw_response=metadata or {},
+                verified_by=actor,
+                verified_at=timezone.now(),
+            )
+
+        receipt = getattr(intent, "receipt", None)
+        if receipt:
+            return receipt
+        return PaymentReceipt.objects.create(
+            payment_intent=intent,
+            transaction=transaction_record,
+            amount=intent.amount,
+            currency=intent.currency or "KES",
+            payment_method=intent.payment_method,
+            issued_by=actor,
+            metadata=metadata or {},
+        )
 
     @staticmethod
     @transaction.atomic
@@ -632,33 +789,50 @@ class PayoutService:
         if payout.status != PayoutStatus.APPROVED:
             raise ValueError(f"Payout must be approved before payment. Status: {payout.status}")
 
-        # Map payout method to payment method
-        method_mapping = {
-            PayoutPaymentMethod.BANK_TRANSFER: PaymentMethod.BANK,
-            PayoutPaymentMethod.MPESA: PaymentMethod.MPESA,
-            PayoutPaymentMethod.WALLET: PaymentMethod.CASH,  # Wallet is internal
-        }
-
-        payment_method = method_mapping.get(payout.payout_method)
-        if not payment_method:
+        if payout.payout_method not in {
+            PayoutPaymentMethod.BANK_TRANSFER,
+            PayoutPaymentMethod.MPESA,
+            PayoutPaymentMethod.WALLET,
+        }:
             raise ValueError(f"Unsupported payout method: {payout.payout_method}")
 
-        # Create payment intent
-        payment_intent = UnifiedPaymentService.create_payment_intent(
+        payment_method = (
+            PaymentMethod.WALLET
+            if payout.payout_method == PayoutPaymentMethod.WALLET
+            else (PaymentMethod.BANK if payout.payout_method == PayoutPaymentMethod.BANK_TRANSFER else PaymentMethod.MPESA)
+        )
+
+        intent = PaymentIntent.objects.create(
             chama=payout.chama,
             user=payout.member.user,
             amount=payout.amount,
-            payment_method=payment_method,
+            currency=payout.currency or "KES",
             purpose=PaymentPurpose.OTHER,
             purpose_id=payout.id,
             description=f"Payout to {payout.member.user.phone}",
+            payment_method=payment_method,
+            phone=payout.member.user.phone or "",
+            provider="payout_disbursement",
+            provider_intent_id=f"payout_{timezone.now().timestamp()}_{payout.id}",
+            status=PaymentStatus.PENDING if payout.payout_method != PayoutPaymentMethod.WALLET else PaymentStatus.INITIATED,
+            idempotency_key=f"payout:{payout.id}:{payout.payout_method}",
             metadata={
                 "payout_id": str(payout.id),
+                "member_id": str(payout.member.user_id),
                 "member_phone": payout.member.user.phone,
+                "payout_method": payout.payout_method,
+                "source": "payouts_service",
             },
         )
+        PaymentAuditLog.objects.create(
+            payment_intent=intent,
+            actor=None,
+            event="payout_initiated",
+            new_status=intent.status,
+            metadata={"payout_id": str(payout.id), "payout_method": payout.payout_method},
+        )
 
-        payout.payment_intent = payment_intent
+        payout.payment_intent = intent
         payout.status = PayoutStatus.PROCESSING
         payout.payment_started_at = timezone.now()
         payout.save()
@@ -670,57 +844,124 @@ class PayoutService:
             new_status=PayoutStatus.PROCESSING,
             details={
                 "payment_method": payment_method,
-                "payment_intent_id": str(payment_intent.id),
+                "payment_intent_id": str(intent.id),
             },
         )
 
-        # Process payment based on method
-        if payment_method == PaymentMethod.MPESA:
-            PayoutService._process_mpesa_payout(payment_intent)
-        elif payment_method == PaymentMethod.BANK:
-            PayoutService._process_bank_payout(payment_intent)
-        else:  # Wallet
-            PayoutService._process_wallet_payout(payment_intent)
+        if payout.payout_method != PayoutPaymentMethod.WALLET:
+            PayoutService._lock_chama_wallet_for_external_payout(payout=payout)
 
-        return payment_intent
+        # Process payment based on method
+        if payout.payout_method == PayoutPaymentMethod.MPESA:
+            PayoutService._process_mpesa_payout(intent)
+        elif payout.payout_method == PayoutPaymentMethod.BANK_TRANSFER:
+            PayoutService._process_bank_payout(intent)
+        else:  # Wallet
+            PayoutService._process_wallet_payout(intent)
+
+        return intent
 
     @staticmethod
     def _process_mpesa_payout(payment_intent: PaymentIntent):
         """Process M-Pesa B2C payout."""
-        # This will be handled by UnifiedPaymentService / mpesa_service
-        # Triggers B2C API call which will callback with result
-        UnifiedPaymentService.process_mpesa_b2c(payment_intent)
+        payout = Payout.objects.select_related("chama", "member__user").get(id=payment_intent.purpose_id)
+        phone = payout.member.user.phone
+        if not phone:
+            raise ValueError("Recipient phone number is missing.")
+
+        if getattr(payment_intent, "status", "") == PaymentStatus.SUCCESS:
+            return
+
+        if getattr(settings, "MPESA_USE_STUB", True):
+            response = {
+                "ConversationID": f"AG_{payment_intent.id.hex[:20]}",
+                "OriginatorConversationID": f"OC_{payment_intent.id.hex[:20]}",
+                "ResponseCode": "0",
+                "ResponseDescription": "Accepted for processing",
+            }
+        else:
+            client = MpesaClient()
+            try:
+                response = client.send_b2c_payment(
+                    phone_number=phone,
+                    amount=str(payment_intent.amount),
+                    command_id="BusinessPayment",
+                    remarks=f"Payout {payout.id}"[:100],
+                    occasion=str(payout.id)[:100],
+                )
+            except MpesaClientError as exc:
+                raise ValueError("Failed to initiate M-Pesa payout.") from exc
+
+        originator_id = str(response.get("OriginatorConversationID") or "").strip() or f"OC_{payment_intent.id.hex[:20]}"
+        b2c = MpesaB2CPayout.objects.create(
+            chama=payout.chama,
+            intent=payment_intent,
+            phone=phone,
+            amount=payment_intent.amount,
+            originator_conversation_id=originator_id,
+            conversation_id=str(response.get("ConversationID") or "")[:120],
+            response_code=str(response.get("ResponseCode") or "")[:20],
+            response_description=str(response.get("ResponseDescription") or "")[:1000],
+            status=MpesaB2CStatus.PENDING,
+        )
+
+        payment_intent.provider = "safaricom"
+        payment_intent.provider_intent_id = originator_id
+        payment_intent.status = PaymentStatus.PENDING
+        payment_intent.save(update_fields=["provider", "provider_intent_id", "status", "updated_at"])
+
+        if getattr(settings, "MPESA_USE_STUB", True):
+            b2c.status = MpesaB2CStatus.SUCCESS
+            b2c.result_code = "0"
+            b2c.result_desc = "Completed (stub)"
+            b2c.transaction_id = f"STUB-{originator_id}"[:80]
+            b2c.processed_at = timezone.now()
+            b2c.save(
+                update_fields=[
+                    "status",
+                    "result_code",
+                    "result_desc",
+                    "transaction_id",
+                    "processed_at",
+                    "updated_at",
+                ]
+            )
+            PayoutService.handle_payment_success(
+                str(payment_intent.id),
+                provider_reference=b2c.transaction_id,
+                provider_name="safaricom",
+            )
 
     @staticmethod
     def _process_bank_payout(payment_intent: PaymentIntent):
         """Process bank transfer payout."""
-        # This will be handled by bank_transfer_service
-        UnifiedPaymentService.process_bank_transfer(payment_intent)
+        raise ValueError("Bank transfer payouts are not available right now.")
 
     @staticmethod
     def _process_wallet_payout(payment_intent: PaymentIntent):
         """Process chama wallet payout (instant)."""
-        from apps.finance.models import LedgerEntry
+        payout = Payout.objects.select_related("chama", "member__user").get(id=payment_intent.purpose_id)
 
-        # Instant wallet credit
         payment_intent.status = PaymentStatus.SUCCESS
         payment_intent.completed_at = timezone.now()
-        payment_intent.save()
+        payment_intent.provider = "internal"
+        payment_intent.provider_intent_id = f"internal_{payment_intent.reference}"
+        payment_intent.save(update_fields=["status", "completed_at", "provider", "provider_intent_id", "updated_at"])
 
-        # Deduct from pool, credit to member wallet
-        ledger_service = LedgerService()
-        ledger_entry = ledger_service.post_payout(
-            chama=payment_intent.chama,
-            payout_id=payment_intent.purpose_id,
-            amount=payment_intent.amount,
+        ledger_entry = LedgerService.post_payout(
+            chama=payout.chama,
+            payout_id=str(payout.id),
+            amount=Decimal(str(payment_intent.amount)),
+            created_by=None,
         )
 
-        # Mark payout as success
-        payout = Payout.objects.get(id=payment_intent.purpose_id)
-        payout.status = PayoutStatus.SUCCESS
-        payout.payment_completed_at = timezone.now()
-        payout.ledger_entry = ledger_entry
-        payout.save()
+        receipt = PayoutService._ensure_payment_receipt(
+            intent=payment_intent,
+            provider_reference=str(payment_intent.reference or "")[:120],
+            provider_name="internal",
+            actor=None,
+            metadata={"payout_id": str(payout.id), "payout_method": payout.payout_method},
+        )
 
         # Log audit
         PayoutAuditLog.objects.create(
@@ -730,22 +971,37 @@ class PayoutService:
             details={
                 "payment_method": "wallet",
                 "ledger_entry_id": str(ledger_entry.id),
+                "receipt_id": str(receipt.id),
             },
         )
 
-        # Notify member
+        payout.status = PayoutStatus.SUCCESS
+        payout.payment_completed_at = timezone.now()
+        payout.ledger_entry = ledger_entry
+        payout.receipt_generated_at = timezone.now()
+        payout.save(update_fields=["status", "payment_completed_at", "ledger_entry", "receipt_generated_at", "updated_at"])
+
+        rotation = PayoutRotation.objects.get(chama=payout.chama)
+        rotation.last_completed_payout = payout
+        rotation.advance_rotation()
+
         NotificationService.create_notification(
             user=payout.member.user,
             notification_type="PAYOUT_SUCCESS",
             title="Payout Received",
-            message=f"KES {payout.amount} sent to your wallet",
+            message=f"KES {payout.amount} credited to your wallet.",
             reference_id=payout.id,
             channels=["PUSH", "IN_APP", "SMS"],
         )
 
     @staticmethod
     @transaction.atomic
-    def handle_payment_success(payment_intent_id) -> Payout:
+    def handle_payment_success(
+        payment_intent_id,
+        *,
+        provider_reference: str = "",
+        provider_name: str = "",
+    ) -> Payout:
         """
         Handle successful payment callback.
 
@@ -757,37 +1013,54 @@ class PayoutService:
         Returns:
             Updated Payout
         """
-        payment_intent = PaymentIntent.objects.get(id=payment_intent_id)
-        payout = Payout.objects.select_related("chama", "member").get(
-            id=payment_intent.purpose_id
-        )
+        payment_intent = PaymentIntent.objects.select_related("chama", "user").get(id=payment_intent_id)
+        payout = Payout.objects.select_related("chama", "member__user").get(id=payment_intent.purpose_id)
 
-        # Update payment intent
+        effective_provider_reference = (
+            str(provider_reference or "")
+            or str(payment_intent.provider_intent_id or "")
+            or str(payment_intent.reference or "")
+        )[:120]
+        effective_provider_name = str(provider_name or payment_intent.provider or "").strip()[:50] or "provider"
+
         payment_intent.status = PaymentStatus.SUCCESS
         payment_intent.completed_at = timezone.now()
-        payment_intent.save()
+        payment_intent.provider = effective_provider_name
+        payment_intent.save(update_fields=["status", "completed_at", "provider", "updated_at"])
 
-        # Create ledger entry
-        ledger_service = LedgerService()
-        ledger_entry = ledger_service.post_payout(
-            chama=payout.chama,
-            payout_id=payout.id,
-            amount=payout.amount,
+        if payout.payout_method == PayoutPaymentMethod.WALLET:
+            ledger_entry = LedgerService.post_payout(
+                chama=payout.chama,
+                payout_id=str(payout.id),
+                amount=Decimal(str(payout.amount)),
+                created_by=None,
+            )
+        else:
+            PayoutService._release_chama_wallet_lock(payout=payout, restore_available=False)
+            ledger_entry = PayoutService._post_external_payout_ledger(
+                payout=payout,
+                provider_reference=effective_provider_reference,
+                actor=None,
+            )
+
+        receipt = PayoutService._ensure_payment_receipt(
+            intent=payment_intent,
+            provider_reference=effective_provider_reference,
+            provider_name=effective_provider_name,
+            actor=None,
+            metadata={"payout_id": str(payout.id), "payout_method": payout.payout_method},
         )
 
-        # Update payout
         payout.status = PayoutStatus.SUCCESS
         payout.payment_completed_at = timezone.now()
         payout.ledger_entry = ledger_entry
-        payout.save()
+        payout.receipt_generated_at = payout.receipt_generated_at or timezone.now()
+        payout.save(update_fields=["status", "payment_completed_at", "ledger_entry", "receipt_generated_at", "updated_at"])
 
         # Advance rotation
         rotation = PayoutRotation.objects.get(chama=payout.chama)
         rotation.last_completed_payout = payout
         rotation.advance_rotation()
-
-        # Generate receipt
-        PayoutService._generate_receipt(payout)
 
         # Log audit
         PayoutAuditLog.objects.create(
@@ -797,6 +1070,7 @@ class PayoutService:
             details={
                 "payment_intent_id": str(payment_intent.id),
                 "ledger_entry_id": str(ledger_entry.id),
+                "receipt_id": str(receipt.id),
             },
         )
 
@@ -839,16 +1113,26 @@ class PayoutService:
         Returns:
             Updated Payout
         """
-        payment_intent = PaymentIntent.objects.get(id=payment_intent_id)
-        payout = Payout.objects.select_related("chama", "member").get(
-            id=payment_intent.purpose_id
-        )
+        payment_intent = PaymentIntent.objects.select_related("chama", "user").get(id=payment_intent_id)
+        payout = Payout.objects.select_related("chama", "member__user").get(id=payment_intent.purpose_id)
 
         # Update payment intent
         payment_intent.status = PaymentStatus.FAILED
         payment_intent.failure_reason = failure_reason
         payment_intent.failure_code = failure_code
-        payment_intent.save()
+        payment_intent.completed_at = timezone.now()
+        payment_intent.save(
+            update_fields=[
+                "status",
+                "failure_reason",
+                "failure_code",
+                "completed_at",
+                "updated_at",
+            ]
+        )
+
+        if payout.payout_method != PayoutPaymentMethod.WALLET:
+            PayoutService._release_chama_wallet_lock(payout=payout, restore_available=True)
 
         # Update payout
         payout.payment_failed_at = timezone.now()
@@ -971,10 +1255,28 @@ class PayoutService:
     @staticmethod
     def _generate_receipt(payout: Payout):
         """Generate PDF receipt for payout."""
-        # TODO: Implement receipt generation
-        # For now, just mark as generated
+        if payout.status != PayoutStatus.SUCCESS:
+            return
+        if payout.receipt_generated_at:
+            return
+
+        intent = payout.payment_intent
+        if not intent:
+            payout.receipt_generated_at = timezone.now()
+            payout.save(update_fields=["receipt_generated_at", "updated_at"])
+            return
+
+        provider_reference = str(intent.provider_intent_id or intent.reference or "")[:120]
+        provider_name = str(intent.provider or "provider")[:50]
+        PayoutService._ensure_payment_receipt(
+            intent=intent,
+            provider_reference=provider_reference,
+            provider_name=provider_name,
+            actor=None,
+            metadata={"payout_id": str(payout.id), "payout_method": payout.payout_method},
+        )
         payout.receipt_generated_at = timezone.now()
-        payout.save()
+        payout.save(update_fields=["receipt_generated_at", "updated_at"])
 
     @staticmethod
     @transaction.atomic
@@ -1001,18 +1303,34 @@ class PayoutService:
         if payout.status != PayoutStatus.FAILED:
             raise ValueError(f"Payout status must be FAILED. Current: {payout.status}")
 
-        # Create new payment intent
-        payment_intent = UnifiedPaymentService.create_payment_intent(
+        attempt = payout.retry_count + 1
+        meta = dict(payout.metadata or {})
+        meta.pop("wallet_lock_applied", None)
+        meta.pop("wallet_lock_released", None)
+        payout.metadata = meta
+        payout.save(update_fields=["metadata", "updated_at"])
+
+        payment_intent = PaymentIntent.objects.create(
             chama=payout.chama,
             user=payout.member.user,
             amount=payout.amount,
-            payment_method=PaymentMethod.MPESA,  # Default retry to M-Pesa
+            currency=payout.currency or "KES",
             purpose=PaymentPurpose.OTHER,
             purpose_id=payout.id,
-            description=f"Payout RETRY to {payout.member.user.phone}",
+            description=f"Payout retry to {payout.member.user.phone}",
+            payment_method=PaymentMethod.MPESA,
+            phone=payout.member.user.phone or "",
+            provider="payout_disbursement",
+            provider_intent_id=f"payout_retry_{attempt}_{payout.id}",
+            status=PaymentStatus.PENDING,
+            idempotency_key=f"payout:{payout.id}:retry:{attempt}",
             metadata={
                 "payout_id": str(payout.id),
-                "retry_count": payout.retry_count + 1,
+                "member_id": str(payout.member.user_id),
+                "member_phone": payout.member.user.phone,
+                "payout_method": payout.payout_method,
+                "retry_count": attempt,
+                "source": "payouts_service_retry",
             },
         )
 
@@ -1030,6 +1348,7 @@ class PayoutService:
         )
 
         # Process payment
+        PayoutService._lock_chama_wallet_for_external_payout(payout=payout)
         PayoutService._process_mpesa_payout(payment_intent)
 
         return payment_intent

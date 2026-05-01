@@ -923,6 +923,24 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
     if str(metadata.get("withdrawal_state") or "").lower() not in {"pending_processing", "submitted"}:
         return intent
 
+    provider_reference = str(metadata.get("payout_reference") or f"B2C-{intent.reference}")[:120]
+    return _complete_member_wallet_withdrawal_success(
+        chama=chama,
+        member=member,
+        intent=intent,
+        provider_reference=provider_reference,
+        raw_response={"stub": True, "payout_reference": provider_reference},
+    )
+
+
+def _complete_member_wallet_withdrawal_success(
+    *,
+    chama: Chama,
+    member,
+    intent: PaymentIntent,
+    provider_reference: str,
+    raw_response: dict[str, Any] | None = None,
+) -> PaymentIntent:
     with transaction.atomic():
         intent = PaymentIntent.objects.select_for_update().get(id=intent.id)
         wallet = _get_member_wallet(member, currency=intent.currency or "KES", lock_for_update=True)
@@ -931,18 +949,16 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
         if _to_decimal(wallet.locked_balance) < amount:
             raise PaymentServiceError("Your withdrawal could not be completed right now.")
 
-        provider_reference = str(metadata.get("payout_reference") or f"B2C-{intent.reference}")[:120]
         now = timezone.now()
-
         transaction_record = UnifiedPaymentService._upsert_transaction(
             intent=intent,
-            provider_reference=provider_reference,
+            provider_reference=str(provider_reference or "")[:120],
             provider_name=intent.provider or "safaricom",
             amount=amount,
             currency=intent.currency or "KES",
             status=TransactionStatus.VERIFIED,
             payer_reference=getattr(member, "phone", "") or "",
-            raw_response={"stub": True, "payout_reference": provider_reference},
+            raw_response=raw_response or {},
             verified_by=member,
             verified_at=now,
         )
@@ -958,7 +974,7 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
                 metadata={
                     "wallet_flow_kind": "withdrawal",
                     "withdrawal_method": intent.payment_method,
-                    "payout_reference": provider_reference,
+                    "payout_reference": str(provider_reference or "")[:120],
                 },
             )
 
@@ -975,7 +991,7 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
                 currency=intent.currency or "KES",
                 status=LedgerStatus.SUCCESS,
                 provider=intent.payment_method,
-                provider_reference=provider_reference,
+                provider_reference=str(provider_reference or "")[:120],
                 idempotency_key=ledger_key,
                 related_payment=intent,
                 narration="Member wallet withdrawal completed.",
@@ -992,11 +1008,11 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
             {
                 "withdrawal_state": "approved_completed",
                 "withdrawal_status_message": "Your withdrawal was completed successfully.",
-                "payout_reference": provider_reference,
+                "payout_reference": str(provider_reference or "")[:120],
             }
         )
         intent.metadata = new_metadata
-        cls_old_status = intent.status
+        old_status = intent.status
         intent.status = PaymentStatus.SUCCESS
         intent.completed_at = now
         intent.save(update_fields=["metadata", "status", "completed_at", "updated_at"])
@@ -1005,9 +1021,9 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
             payment_intent=intent,
             actor=member,
             event="wallet_withdrawal_completed",
-            previous_status=cls_old_status,
+            previous_status=old_status,
             new_status=intent.status,
-            metadata={"payout_reference": provider_reference},
+            metadata={"payout_reference": str(provider_reference or "")[:120]},
         )
 
         try:
@@ -1031,6 +1047,39 @@ def _complete_member_wallet_withdrawal_stub(*, chama: Chama, member, intent: Pay
             pass
 
         return intent
+
+
+def complete_member_wallet_withdrawal_from_b2c(
+    *,
+    intent: PaymentIntent,
+    provider_reference: str,
+    raw_response: dict[str, Any] | None = None,
+) -> PaymentIntent:
+    member = intent.user
+    chama = intent.chama
+    if not member or not chama:
+        raise PaymentServiceError("Withdrawal could not be completed.")
+    return _complete_member_wallet_withdrawal_success(
+        chama=chama,
+        member=member,
+        intent=intent,
+        provider_reference=provider_reference,
+        raw_response=raw_response,
+    )
+
+
+def fail_member_wallet_withdrawal_from_b2c(*, intent: PaymentIntent, reason: str) -> PaymentIntent:
+    member = intent.user
+    chama = intent.chama
+    if not member or not chama:
+        raise PaymentServiceError("Withdrawal could not be updated.")
+    return _release_member_wallet_withdrawal_lock(
+        chama=chama,
+        member=member,
+        intent=intent,
+        reason=reason or "We couldn’t complete this withdrawal.",
+        failure_code="wallet_withdrawal_failed",
+    )
 
 
 def _release_member_wallet_withdrawal_lock(

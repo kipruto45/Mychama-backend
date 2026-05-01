@@ -844,6 +844,18 @@ class MemberWalletWorkflowApiTests(TestCase):
         self.assertEqual(wallet.available_balance, Decimal("500.00"))
 
     def test_member_can_submit_wallet_withdrawal_request(self):
+        from apps.accounts.models import MemberKYC, MemberKYCStatus, MemberKYCTier
+        from apps.security.pin_service import PinService, PinType
+
+        MemberKYC.objects.create(
+            user=self.member,
+            chama=self.chama,
+            id_number="12345678",
+            status=MemberKYCStatus.APPROVED,
+            kyc_tier=MemberKYCTier.TIER_2,
+        )
+        PinService.set_pin(self.member, "1234", PinType.WITHDRAWAL)
+
         Wallet.objects.create(
             owner_type=WalletOwnerType.USER,
             owner_id=self.member.id,
@@ -859,6 +871,7 @@ class MemberWalletWorkflowApiTests(TestCase):
                 "amount": "700.00",
                 "payment_method": "mpesa",
                 "phone": "+254711000020",
+                "pin": "1234",
             },
             format="json",
         )
@@ -985,6 +998,18 @@ class MemberWalletWorkflowApiTests(TestCase):
 
     @override_settings(MPESA_USE_STUB=True)
     def test_member_wallet_withdrawal_refresh_can_complete_in_stub_mode(self):
+        from apps.accounts.models import MemberKYC, MemberKYCStatus, MemberKYCTier
+        from apps.security.pin_service import PinService, PinType
+
+        MemberKYC.objects.create(
+            user=self.member,
+            chama=self.chama,
+            id_number="12345678",
+            status=MemberKYCStatus.APPROVED,
+            kyc_tier=MemberKYCTier.TIER_2,
+        )
+        PinService.set_pin(self.member, "1234", PinType.WITHDRAWAL)
+
         Wallet.objects.create(
             owner_type=WalletOwnerType.USER,
             owner_id=self.member.id,
@@ -1000,6 +1025,7 @@ class MemberWalletWorkflowApiTests(TestCase):
                 "amount": "700.00",
                 "payment_method": "mpesa",
                 "phone": "+254711000020",
+                "pin": "1234",
             },
             format="json",
         )
