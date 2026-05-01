@@ -32,7 +32,7 @@ django-celery-beat>=2.7
 openai>=1.40
 
 # SMS & Email
-africastalking>=1.2
+africastalking>=2.0.2
 sendgrid>=6.11
 
 # File Processing & PDF
