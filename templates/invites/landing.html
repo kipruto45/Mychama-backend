@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyChama Invite</title>
+  <meta name="theme-color" content="#0f9d6c">
+  <style>
+    :root {
+      --bg: #f6fbf8;
+      --panel: rgba(255, 255, 255, 0.92);
+      --line: rgba(15, 59, 43, 0.08);
+      --text: #103529;
+      --muted: #5f766d;
+      --primary: #0f9d6c;
+      --primary-deep: #0a7d56;
+      --accent: #dff6ec;
+      --warn: #fff4d9;
+      --danger: #ffe7e1;
+      --shadow: 0 24px 60px rgba(16, 53, 41, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --max-width: 1080px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(15, 157, 108, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(84, 198, 151, 0.16), transparent 24%),
+        linear-gradient(180deg, #fbfffc 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e6f7ef, #d2f2e3);
+      border: 1px solid rgba(15, 157, 108, 0.16);
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      font-size: 20px;
+    }
+
+    .top-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius-xl);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero-main {
+      padding: 34px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--primary-deep);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      margin: 0 0 14px;
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p.lead {
+      margin: 0 0 24px;
+      font-size: 17px;
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 58ch;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .button {
+      border: 0;
+      cursor: pointer;
+      padding: 15px 20px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 15px;
+      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button.primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      color: #fff;
+      box-shadow: 0 16px 30px rgba(15, 157, 108, 0.24);
+    }
+    .button.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+    .button.ghost {
+      background: rgba(15, 157, 108, 0.08);
+      color: var(--primary-deep);
+    }
+
+    .install-hint {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .hero-side {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .status {
+      padding: 16px 18px;
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      line-height: 1.6;
+      border: 1px solid rgba(16, 53, 41, 0.06);
+    }
+
+    .status.ready { background: var(--accent); color: var(--primary-deep); }
+    .status.expired, .status.accepted { background: var(--warn); color: #7d5a00; }
+    .status.revoked, .status.invalid, .status.declined, .status.rejected, .status.cancelled { background: var(--danger); color: #9c3c23; }
+
+    .summary {
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--line);
+    }
+
+    .summary h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      letter-spacing: -0.03em;
+    }
+
+    .summary-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .summary-item {
+      display: grid;
+      gap: 4px;
+    }
+
+    .summary-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .summary-value {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+
+    .code-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: #0f172a;
+      color: #fff;
+      border-radius: var(--radius-md);
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      width: fit-content;
+    }
+
+    .steps {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .step {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid var(--line);
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(15, 157, 108, 0.12);
+      color: var(--primary-deep);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .step-copy {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .page { padding: 18px 14px 32px; }
+      .topbar { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .hero-main, .hero-side { padding: 22px; }
+      .steps { grid-template-columns: 1fr; }
+      .cta-row { flex-direction: column; }
+      .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-badge">MC</div>
+        <span>MyChama</span>
+      </div>
+      <div class="top-links">
+        <span>Secure invite flow</span>
+        <span>Install, sign in, verify, and join</span>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="panel hero-main">
+        <div class="eyebrow">
+          {% if entry_mode == "code" %}Join with Code{% else %}Invite Link{% endif %}
+        </div>
+        <h1>{{ headline }}</h1>
+        <p class="lead">{{ subheadline }}</p>
+
+        <div class="cta-row">
+          <a href="{{ app_target_url }}" class="button primary" id="open-in-app">Open in App</a>
+          {% if platform == "ios" %}
+            <a href="{{ app_store_url }}" class="button secondary">Download on App Store</a>
+          {% else %}
+            <a href="{{ play_store_url }}" class="button secondary">Download on Google Play</a>
+          {% endif %}
+          {% if invite_code %}
+            <a href="{{ web_continue_url }}" class="button ghost">Continue with Code</a>
+          {% endif %}
+        </div>
+
+        <p class="install-hint">
+          If MyChama is already installed, <strong>Open in App</strong> will take you straight to your invite preview.
+          If you install the app first, come back to this page and tap <strong>Open in App</strong> or use the code shown here.
+        </p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-title">Open or install the app</div>
+            <div class="step-copy">Use the secure app link or install MyChama from your store.</div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-title">Sign in or create an account</div>
+            <div class="step-copy">Your invite stays ready while you sign in or register.</div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-title">Verify your phone or email</div>
+            <div class="step-copy">A quick code check keeps the chama secure.</div>
+          </div>
+          <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-title">Join the chama</div>
+            <div class="step-copy">Review the invite, accept it, and continue into the group.</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel hero-side">
+        <div class="status {{ state }}">
+          <strong>
+            {% if state == "ready" %}
+              Invite ready
+            {% elif state == "expired" %}
+              Invite expired
+            {% elif state == "revoked" %}
+              Invite no longer valid
+            {% elif state == "accepted" %}
+              Invite already used
+            {% else %}
+              Invite unavailable
+            {% endif %}
+          </strong>
+        </div>
+
+        <div class="summary">
+          <h2>{% if invite and invite.chama_name %}{{ invite.chama_name }}{% else %}MyChama invite{% endif %}</h2>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-label">Description</div>
+              <div class="summary-value">
+                {% if invite and invite.chama_description %}
+                  {{ invite.chama_description }}
+                {% else %}
+                  Join the chama securely and continue setup in the app.
+                {% endif %}
+              </div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Invited by</div>
+              <div class="summary-value">
+                {% if invite and invite.invited_by_name %}
+                  {{ invite.invited_by_name }}
+                {% else %}
+                  MyChama admin
+                {% endif %}
+              </div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Assigned role</div>
+              <div class="summary-value">
+                {% if invite and invite.assigned_role_display %}
+                  {{ invite.assigned_role_display }}
+                {% elif invite and invite.role_display %}
+                  {{ invite.role_display }}
+                {% else %}
+                  Member
+                {% endif %}
+              </div>
+            </div>
+            {% if target_hint %}
+              <div class="summary-item">
+                <div class="summary-label">Invite target</div>
+                <div class="summary-value">{{ target_hint }}</div>
+              </div>
+            {% endif %}
+            {% if invite and invite.expires_at %}
+              <div class="summary-item">
+                <div class="summary-label">Expires</div>
+                <div class="summary-value">{{ invite.expires_at }}</div>
+              </div>
+            {% endif %}
+            {% if invite_code %}
+              <div class="summary-item">
+                <div class="summary-label">Invite code</div>
+                <div class="code-box">{{ invite_code }}</div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="footer-note">
+          MyChama keeps invite acceptance secure by checking expiry, status, and the intended account before anyone joins the chama.
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var button = document.getElementById('open-in-app');
+      if (!button) return;
+      button.addEventListener('click', function () {
+        window.setTimeout(function () {
+          var note = document.querySelector('.install-hint');
+          if (note) {
+            note.innerHTML = 'If the app did not open yet, install MyChama first, then return to this page and tap <strong>Open in App</strong> again. You can also use the invite code shown here inside the app.';
+          }
+        }, 1200);
+      });
+    })();
+  </script>
+</body>
+</html>

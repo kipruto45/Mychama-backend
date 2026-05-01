@@ -1,0 +1,602 @@
+:root {
+    color-scheme: light;
+}
+
+html {
+    color-scheme: light !important;
+}
+
+[data-bs-theme="dark"],
+[data-theme="dark"] {
+    color-scheme: light !important;
+}
+
+:root {
+    --mychama-bg: #f4f7fb;
+    --mychama-surface: rgba(255, 255, 255, 0.86);
+    --mychama-surface-strong: #ffffff;
+    --mychama-border: rgba(15, 23, 42, 0.08);
+    --mychama-text: #10233f;
+    --mychama-muted: #5f718c;
+    --mychama-primary: #1f6feb;
+    --mychama-primary-soft: rgba(31, 111, 235, 0.12);
+    --mychama-secondary: #12b981;
+    --mychama-shadow: 0 24px 60px rgba(15, 23, 42, 0.10);
+    --mychama-radius-lg: 28px;
+    --mychama-radius-md: 18px;
+    --mychama-radius-sm: 12px;
+}
+
+body {
+    background:
+        radial-gradient(circle at top left, rgba(31, 111, 235, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(18, 185, 129, 0.10), transparent 24%),
+        linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+    color: var(--mychama-text);
+}
+
+.app-header {
+    backdrop-filter: blur(18px);
+    background: rgba(255, 255, 255, 0.78);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.app-header .nav-link,
+.app-sidebar .nav-link,
+.brand-text {
+    font-weight: 600;
+}
+
+.app-sidebar {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 249, 255, 0.98) 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.16);
+    box-shadow: 14px 0 40px rgba(15, 23, 42, 0.06);
+}
+
+.app-sidebar .sidebar-wrapper,
+.app-sidebar .sidebar-brand {
+    background: transparent;
+}
+
+.app-sidebar .nav-sidebar .nav-link {
+    border-radius: 14px;
+    color: #304968;
+    margin-bottom: 4px;
+}
+
+.app-sidebar .nav-sidebar .nav-link:hover,
+.app-sidebar .nav-sidebar .nav-link.active {
+    background: linear-gradient(135deg, rgba(31, 111, 235, 0.14), rgba(18, 185, 129, 0.12));
+    color: #12335e;
+}
+
+.content-wrapper,
+.app-main {
+    background: transparent;
+}
+
+.content-header h1,
+.content-header .m-0 {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.card,
+.module,
+.login-card-body,
+.small-box,
+.info-box,
+.alert,
+.callout {
+    border: 1px solid var(--mychama-border);
+    border-radius: var(--mychama-radius-md);
+    box-shadow: var(--mychama-shadow);
+}
+
+.card,
+.module,
+.login-card-body,
+.content-wrapper .content .container-fluid > .row > div > .card {
+    background: var(--mychama-surface);
+    backdrop-filter: blur(18px);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.card-title,
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4,
+.card-header h5 {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: rgba(148, 163, 184, 0.05);
+    --bs-table-hover-bg: rgba(31, 111, 235, 0.06);
+}
+
+.table thead th {
+    border-bottom-width: 1px;
+    color: var(--mychama-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.table tbody td {
+    vertical-align: middle;
+}
+
+.btn {
+    border-radius: 999px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: none;
+}
+
+.btn-primary,
+.btn-success,
+.btn-info {
+    border: 0;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1f6feb 0%, #4387f7 100%);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #12b981 0%, #32d19c 100%);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #2463eb 0%, #4b8bff 100%);
+}
+
+.form-control,
+.custom-select,
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    border-radius: var(--mychama-radius-sm);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: none;
+}
+
+.form-control:focus,
+.select2-container--default.select2-container--focus .select2-selection--multiple,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: rgba(31, 111, 235, 0.48);
+    box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.12);
+}
+
+.object-tools a,
+.submit-row input,
+.submit-row a {
+    border-radius: 999px;
+}
+
+.breadcrumb {
+    background: rgba(255, 255, 255, 0.64);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 999px;
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.55rem 0.95rem;
+}
+
+.login-page {
+    background:
+        radial-gradient(circle at top left, rgba(31, 111, 235, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(18, 185, 129, 0.18), transparent 24%),
+        linear-gradient(180deg, #edf4ff 0%, #f6fbff 100%);
+    min-height: 100vh;
+}
+
+.login-box {
+    max-width: 1100px;
+    width: min(96vw, 1100px);
+}
+
+.login-box .card {
+    overflow: hidden;
+}
+
+.mychama-login-shell {
+    display: grid;
+    grid-template-columns: 1.2fr 0.88fr;
+    min-height: 620px;
+}
+
+.mychama-login-aside {
+    background:
+        linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(22, 44, 86, 0.92)),
+        linear-gradient(135deg, #1f6feb, #12b981);
+    color: #f8fbff;
+    padding: 3rem;
+    position: relative;
+}
+
+.mychama-login-aside::after {
+    content: "";
+    position: absolute;
+    inset: auto 2rem 2rem auto;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 68%);
+    pointer-events: none;
+}
+
+.mychama-login-brand {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.mychama-login-brand img {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    height: 70px;
+    padding: 0.75rem;
+    width: 70px;
+}
+
+.mychama-login-brand h1 {
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin: 0;
+}
+
+.mychama-login-brand p {
+    color: rgba(226, 232, 240, 0.86);
+    margin: 0.35rem 0 0;
+}
+
+.mychama-login-copy {
+    max-width: 36rem;
+}
+
+.mychama-login-copy h2 {
+    color: #fff;
+    font-size: 2.65rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1.05;
+    margin: 0 0 1rem;
+}
+
+.mychama-login-copy p {
+    color: rgba(226, 232, 240, 0.84);
+    font-size: 1.02rem;
+    line-height: 1.8;
+}
+
+.mychama-login-highlights {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 2rem;
+}
+
+.mychama-login-highlights li {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    color: #f8fbff;
+    display: flex;
+    gap: 0.85rem;
+    list-style: none;
+    padding: 0.95rem 1rem;
+}
+
+.mychama-login-highlights i {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    display: inline-flex;
+    height: 2.2rem;
+    justify-content: center;
+    width: 2.2rem;
+}
+
+.mychama-login-panel {
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem;
+}
+
+.mychama-login-panel .login-box-msg {
+    color: var(--mychama-muted);
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.mychama-login-panel h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.5rem;
+}
+
+.mychama-login-panel .input-group-text {
+    background: transparent;
+    border-left: 0;
+    border-radius: 0 var(--mychama-radius-sm) var(--mychama-radius-sm) 0;
+}
+
+.mychama-login-panel .form-control {
+    border-right: 0;
+}
+
+.mychama-login-panel .btn {
+    min-height: 3.25rem;
+}
+
+.mychama-login-footer {
+    color: var(--mychama-muted);
+    font-size: 0.95rem;
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.mychama-admin-hero {
+    background:
+        radial-gradient(circle at top right, rgba(18, 185, 129, 0.14), transparent 28%),
+        radial-gradient(circle at left center, rgba(31, 111, 235, 0.14), transparent 26%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(248, 251, 255, 0.98));
+    border: 1px solid var(--mychama-border);
+    border-radius: var(--mychama-radius-lg);
+    box-shadow: var(--mychama-shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    padding: 2rem;
+}
+
+.mychama-admin-hero__grid {
+    align-items: center;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+}
+
+.mychama-admin-hero h1 {
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1.02;
+    margin: 0 0 0.8rem;
+}
+
+.mychama-admin-hero p {
+    color: var(--mychama-muted);
+    font-size: 1rem;
+    line-height: 1.8;
+    margin: 0;
+    max-width: 46rem;
+}
+
+.mychama-admin-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: 1.4rem;
+}
+
+.mychama-admin-stat-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 1.5rem;
+}
+
+.mychama-admin-stat {
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid var(--mychama-border);
+    border-radius: 22px;
+    box-shadow: var(--mychama-shadow);
+    padding: 1.1rem 1.15rem;
+}
+
+.mychama-admin-stat__label {
+    color: var(--mychama-muted);
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.45rem;
+    text-transform: uppercase;
+}
+
+.mychama-admin-stat__value {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.mychama-admin-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.95fr);
+}
+
+.mychama-app-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mychama-app-card {
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid var(--mychama-border);
+    border-radius: 22px;
+    box-shadow: var(--mychama-shadow);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 1.25rem;
+}
+
+.mychama-app-card__header {
+    align-items: center;
+    display: flex;
+    gap: 0.9rem;
+    margin-bottom: 0.9rem;
+}
+
+.mychama-app-card__icon {
+    align-items: center;
+    background: linear-gradient(135deg, rgba(31, 111, 235, 0.14), rgba(18, 185, 129, 0.14));
+    border-radius: 18px;
+    color: var(--mychama-primary);
+    display: inline-flex;
+    font-size: 1.1rem;
+    height: 3rem;
+    justify-content: center;
+    width: 3rem;
+}
+
+.mychama-app-card__title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0;
+}
+
+.mychama-app-card__meta {
+    color: var(--mychama-muted);
+    font-size: 0.92rem;
+}
+
+.mychama-model-row {
+    align-items: center;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: 0.9rem 0;
+}
+
+.mychama-model-row:first-child {
+    border-top: 0;
+    padding-top: 0.1rem;
+}
+
+.mychama-model-row:last-child {
+    padding-bottom: 0;
+}
+
+.mychama-model-row__name {
+    font-weight: 700;
+}
+
+.mychama-model-row__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.mychama-panel {
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid var(--mychama-border);
+    border-radius: 22px;
+    box-shadow: var(--mychama-shadow);
+    padding: 1.35rem;
+}
+
+.mychama-panel__title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+}
+
+.mychama-quick-links {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.mychama-quick-link {
+    align-items: center;
+    background: rgba(31, 111, 235, 0.05);
+    border: 1px solid rgba(31, 111, 235, 0.10);
+    border-radius: 16px;
+    color: var(--mychama-text);
+    display: flex;
+    gap: 0.85rem;
+    justify-content: space-between;
+    padding: 0.95rem 1rem;
+    text-decoration: none;
+}
+
+.mychama-quick-link:hover {
+    background: rgba(31, 111, 235, 0.08);
+    color: var(--mychama-primary);
+    text-decoration: none;
+}
+
+.mychama-activity-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.mychama-activity-item {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+}
+
+.mychama-activity-item__time {
+    color: var(--mychama-muted);
+    display: block;
+    font-size: 0.86rem;
+    margin-bottom: 0.35rem;
+}
+
+.mychama-empty {
+    color: var(--mychama-muted);
+    padding: 0.5rem 0;
+}
+
+@media (max-width: 1199.98px) {
+    .mychama-admin-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mychama-admin-grid,
+    .mychama-admin-hero__grid,
+    .mychama-login-shell {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .mychama-admin-stat-grid,
+    .mychama-app-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mychama-login-aside,
+    .mychama-login-panel,
+    .mychama-admin-hero,
+    .mychama-panel,
+    .mychama-app-card {
+        padding: 1.25rem;
+    }
+
+    .login-box {
+        width: min(100vw - 1.5rem, 1100px);
+    }
+}

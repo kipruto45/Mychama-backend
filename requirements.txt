@@ -1,0 +1,70 @@
+# Django & DRF
+Django>=5.1,<5.2
+djangorestframework>=3.15,<3.16
+django-cors-headers>=4.4
+django-environ>=0.11
+django-filter>=24.2
+django-jazzmin>=3.0.4
+
+# Database
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+
+# Supabase
+supabase>=2.7
+pgvector>=0.3
+
+# Authentication & Security
+PyJWT>=2.8
+cryptography>=42.0
+argon2-cffi>=23.1
+bcrypt>=5.0
+
+# Redis & Caching
+redis>=5.0
+django-redis>=5.4
+
+# Celery
+celery>=5.4
+django-celery-beat>=2.7
+
+# AI Integration
+openai>=1.40
+
+# SMS & Email
+africastalking>=1.2
+sendgrid>=6.11
+
+# File Processing & PDF
+Pillow>=10.3
+openpyxl>=3.1
+reportlab>=4.0  # For PDF invoice generation
+
+# Monitoring & Logging
+sentry-sdk>=2.5
+loguru>=0.7
+posthog>=3.6
+firebase-admin>=6.5
+requests>=2.32
+
+# Analytics
+posthog>=3.0
+
+# API Documentation
+drf-spectacular>=0.28
+
+# Testing
+pytest>=8.2
+pytest-django>=4.8
+pytest-cov>=5.0
+factory-boy>=3.3
+faker>=25.0
+
+# Code Quality
+ruff>=0.5
+black>=24.4
+isort>=5.13
+
+# Production
+gunicorn>=22.0
+whitenoise>=6.7

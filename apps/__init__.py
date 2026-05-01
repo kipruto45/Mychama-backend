@@ -1,0 +1,1 @@
+# MyChama Django apps package

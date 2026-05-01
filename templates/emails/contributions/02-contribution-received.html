@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contribution Received - {{chama_name}}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F3F4F6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="display: none; font-size: 0; color: transparent; mso-hide: all;">Your contribution of {{currency}} {{amount}} has been received</div>
+  
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #F3F4F6;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: #22C55E; border-radius: 50%; font-size: 24px; color: #FFFFFF;">✓</span>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 32px;">
+              <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 700; color: #0A0A0A; line-height: 1.3; text-align: center;">Contribution Received!</h1>
+              
+              <p style="margin: 0 0 24px; font-size: 16px; color: #4B5563; line-height: 1.7; text-align: center;">
+                Hi {{user_name}},<br>
+                Your contribution for <strong>{{chama_name}}</strong> has been successfully received.
+              </p>
+              
+              <!-- Receipt Details -->
+              <div style="background: #F0FDF4; border-radius: 12px; padding: 24px; margin: 24px 0; border: 1px solid #BBF7D0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #BBF7D0;">
+                      <span style="font-size: 14px; color: #6B7280;">Receipt Number</span>
+                      <div style="font-size: 14px; font-weight: 600; color: #166534;">{{receipt_code}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #BBF7D0;">
+                      <span style="font-size: 14px; color: #6B7280;">Amount Received</span>
+                      <div style="font-size: 24px; font-weight: 700; color: #166534;">{{currency}} {{amount}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #BBF7D0;">
+                      <span style="font-size: 14px; color: #6B7280;">Contribution Type</span>
+                      <div style="font-size: 14px; font-weight: 600; color: #166534;">{{contribution_type}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #BBF7D0;">
+                      <span style="font-size: 14px; color: #6B7280;">Payment Method</span>
+                      <div style="font-size: 14px; font-weight: 600; color: #166534;">{{payment_method}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0;">
+                      <span style="font-size: 14px; color: #6B7280;">Date Received</span>
+                      <div style="font-size: 14px; font-weight: 600; color: #166534;">{{date_received}}</div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              
+              <p style="margin: 24px 0 0; font-size: 14px; color: #6B7280; text-align: center;">
+                Thank you for your contribution to {{chama_name}}!
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background: #F9FAFB; border-top: 1px solid #E5E7EB;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align: center; font-size: 12px; color: #9CA3AF; line-height: 1.6;">
+                    MyChama Technologies · Nairobi, Kenya
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

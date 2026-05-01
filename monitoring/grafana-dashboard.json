@@ -1,0 +1,192 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "mychama-security-ops",
+    "title": "MyChama Security And Operations",
+    "tags": ["mychama", "security", "fraud", "payments"],
+    "timezone": "Africa/Nairobi",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"mychama-api\"}",
+            "legendFormat": "API"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "API P95 Latency",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "5xx Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "(sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1)) * 100",
+            "legendFormat": "5xx %"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Failed Login Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "increase(mychama_auth_failed_logins_total[15m])",
+            "legendFormat": "Failed logins"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Refresh Token Reuse Events",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(mychama_auth_refresh_reuse_total[24h])",
+            "legendFormat": "Reuse"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Active Sessions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "mychama_auth_active_sessions",
+            "legendFormat": "Sessions"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "KYC Submission Outcomes",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "increase(mychama_kyc_submissions_total[1h])",
+            "legendFormat": "Submitted"
+          },
+          {
+            "expr": "increase(mychama_kyc_approved_submissions_total[1h])",
+            "legendFormat": "Approved"
+          },
+          {
+            "expr": "increase(mychama_kyc_failed_submissions_total[1h])",
+            "legendFormat": "Failed"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "KYC Provider Latency",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(mychama_kyc_provider_duration_seconds_bucket[5m])) by (le, provider))",
+            "legendFormat": "{{provider}}"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Fraud Score Bands",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "increase(mychama_risk_score_band_total{band=\"0_30\"}[1h])",
+            "legendFormat": "0-30"
+          },
+          {
+            "expr": "increase(mychama_risk_score_band_total{band=\"31_60\"}[1h])",
+            "legendFormat": "31-60"
+          },
+          {
+            "expr": "increase(mychama_risk_score_band_total{band=\"61_80\"}[1h])",
+            "legendFormat": "61-80"
+          },
+          {
+            "expr": "increase(mychama_risk_score_band_total{band=\"81_100\"}[1h])",
+            "legendFormat": "81-100"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Blocked Or Frozen Actions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(mychama_risk_blocked_actions_total[24h])",
+            "legendFormat": "Blocked"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "M-Pesa Failures",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "increase(mychama_provider_mpesa_failures_total[1h])",
+            "legendFormat": "M-Pesa failures"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Africa's Talking Failures",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "increase(mychama_provider_africastalking_failures_total[1h])",
+            "legendFormat": "SMS failures"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Celery Queue Depth",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "mychama_celery_queue_depth",
+            "legendFormat": "Queue depth"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Audit Chain Breaks",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(mychama_audit_chain_break_total[24h])",
+            "legendFormat": "Audit chain breaks"
+          }
+        ]
+      }
+    ]
+  }
+}

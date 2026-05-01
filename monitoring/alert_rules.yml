@@ -1,0 +1,112 @@
+groups:
+  - name: mychama-platform
+    rules:
+      - alert: MyChamaApiDown
+        expr: up{job="mychama-api"} == 0
+        for: 2m
+        labels:
+          severity: P1
+          service: api
+        annotations:
+          summary: "MyChama API is down"
+          description: "The API metrics endpoint has been unavailable for more than 2 minutes."
+
+      - alert: MyChamaHighP95Latency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1.5
+        for: 10m
+        labels:
+          severity: P2
+          service: api
+        annotations:
+          summary: "High API P95 latency"
+          description: "The API P95 latency has exceeded 1.5 seconds for 10 minutes."
+
+      - alert: MyChamaHighServerErrorRate
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1)) > 0.05
+        for: 10m
+        labels:
+          severity: P2
+          service: api
+        annotations:
+          summary: "Elevated 5xx error rate"
+          description: "The platform is returning more than 5% server errors over a 5 minute window."
+
+      - alert: MyChamaFailedLoginSpike
+        expr: increase(mychama_auth_failed_logins_total[15m]) > 25
+        for: 5m
+        labels:
+          severity: P2
+          service: auth
+        annotations:
+          summary: "Failed login spike detected"
+          description: "Failed logins crossed the configured threshold in the last 15 minutes."
+
+      - alert: MyChamaRefreshTokenReuseDetected
+        expr: increase(mychama_auth_refresh_reuse_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: P1
+          service: auth
+        annotations:
+          summary: "Refresh token reuse detected"
+          description: "At least one refresh token reuse event was detected."
+
+      - alert: MyChamaFraudSpike
+        expr: increase(mychama_risk_blocked_actions_total[15m]) > 10
+        for: 5m
+        labels:
+          severity: P2
+          service: risk
+        annotations:
+          summary: "Fraud block spike"
+          description: "Blocked or frozen actions are elevated beyond the configured threshold."
+
+      - alert: MyChamaKycFailuresElevated
+        expr: increase(mychama_kyc_failed_submissions_total[30m]) > 20
+        for: 10m
+        labels:
+          severity: P2
+          service: kyc
+        annotations:
+          summary: "Elevated KYC failures"
+          description: "KYC submission or provider failures are elevated in the last 30 minutes."
+
+      - alert: MyChamaPaymentGatewayErrors
+        expr: increase(mychama_provider_mpesa_failures_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: P2
+          service: payments
+        annotations:
+          summary: "M-Pesa gateway failure spike"
+          description: "M-Pesa callback or provider failures crossed the configured threshold."
+
+      - alert: MyChamaSmsDeliveryFailures
+        expr: increase(mychama_provider_africastalking_failures_total[30m]) > 10
+        for: 10m
+        labels:
+          severity: P3
+          service: messaging
+        annotations:
+          summary: "Africa's Talking delivery degradation"
+          description: "SMS delivery failures exceeded the configured threshold."
+
+      - alert: MyChamaCeleryBacklog
+        expr: mychama_celery_queue_depth > 100
+        for: 15m
+        labels:
+          severity: P3
+          service: workers
+        annotations:
+          summary: "Celery backlog is elevated"
+          description: "Queue depth exceeded 100 tasks for more than 15 minutes."
+
+      - alert: MyChamaAuditTamperSignal
+        expr: increase(mychama_audit_chain_break_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: P1
+          service: audit
+        annotations:
+          summary: "Audit chain tamper signal"
+          description: "An audit chain verification failure was recorded."
