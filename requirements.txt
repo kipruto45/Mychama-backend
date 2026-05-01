@@ -67,4 +67,4 @@ isort>=5.13
 
 # Production
 gunicorn>=22.0
-whitenoise>=6.7
+whitenoise>=6.12.0
