@@ -45,7 +45,7 @@ sentry-sdk>=2.5
 loguru>=0.7
 posthog>=3.6
 firebase-admin>=6.5
-requests>=2.32
+requests>=2.33.1
 
 # Analytics
 posthog>=3.0
