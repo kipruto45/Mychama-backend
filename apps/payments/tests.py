@@ -29,8 +29,14 @@ from apps.payments.unified_models import (
     PaymentReceiptDownloadToken,
     PaymentStatus,
     PaymentTransaction,
+    PaymentReconciliationCase,
+    PaymentStatementLine,
+    ReconciliationCaseStatus,
+    ReconciliationMismatchType,
+    StatementLineMatchStatus,
     TransactionStatus,
 )
+from apps.payments.unified_services import UnifiedPaymentService
 
 
 class PaymentAutomationTests(TestCase):
@@ -227,6 +233,119 @@ class PaymentReceiptPdfTests(TestCase):
             created_by=self.member,
             updated_by=self.member,
         )
+
+
+class UnifiedReconciliationTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.admin = user_model.objects.create_user(
+            phone="+254744300001",
+            password="password123",
+            full_name="Unified Admin",
+        )
+        self.member = user_model.objects.create_user(
+            phone="+254744300002",
+            password="password123",
+            full_name="Unified Member",
+        )
+        self.chama = Chama.objects.create(name="Unified Reconciliation Chama")
+        Membership.objects.create(
+            user=self.admin,
+            chama=self.chama,
+            role=MembershipRole.CHAMA_ADMIN,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            joined_at=timezone.now(),
+        )
+        Membership.objects.create(
+            user=self.member,
+            chama=self.chama,
+            role=MembershipRole.MEMBER,
+            status=MemberStatus.ACTIVE,
+            is_active=True,
+            is_approved=True,
+            joined_at=timezone.now(),
+        )
+
+    def test_bank_statement_import_matches_payment_intent(self):
+        intent = UnifiedPaymentService.create_payment_intent(
+            chama=self.chama,
+            user=self.member,
+            amount=Decimal("1200.00"),
+            currency="KES",
+            payment_method=PaymentMethod.BANK,
+            purpose="other",
+            description="Bank top-up",
+            bank_name="Test Bank",
+            account_number="1234567890",
+            account_name=self.chama.name,
+            metadata={"test": True},
+        )
+
+        transfer_reference = getattr(intent.bank_details, "transfer_reference", "") if hasattr(intent, "bank_details") else ""
+        self.assertTrue(transfer_reference)
+
+        statement_import = UnifiedPaymentService.import_statement(
+            chama=self.chama,
+            actor=self.admin,
+            payment_method=PaymentMethod.BANK,
+            provider_name="test_bank",
+            source_name="unit_test",
+            rows=[
+                {
+                    "external_reference": transfer_reference,
+                    "payer_reference": "+254744300002",
+                    "amount": "1200.00",
+                    "currency": "KES",
+                    "transaction_date": timezone.now().isoformat(),
+                }
+            ],
+        )
+
+        line = PaymentStatementLine.objects.filter(statement_import=statement_import).first()
+        self.assertIsNotNone(line)
+        self.assertEqual(line.match_status, StatementLineMatchStatus.MATCHED)
+        self.assertEqual(line.matched_payment_intent_id, intent.id)
+
+    def test_confirm_payment_action_marks_intent_success_and_generates_receipt(self):
+        intent = UnifiedPaymentService.create_payment_intent(
+            chama=self.chama,
+            user=self.member,
+            amount=Decimal("800.00"),
+            currency="KES",
+            payment_method=PaymentMethod.BANK,
+            purpose="other",
+            description="Bank transfer deposit",
+            bank_name="Test Bank",
+            account_number="1234567890",
+            account_name=self.chama.name,
+        )
+
+        case = PaymentReconciliationCase.objects.create(
+            chama=self.chama,
+            payment_intent=intent,
+            mismatch_type=ReconciliationMismatchType.MANUAL_REVIEW,
+            case_status=ReconciliationCaseStatus.OPEN,
+            expected_amount=intent.amount,
+            received_amount=intent.amount,
+            received_reference="BANK-REF-123",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+
+        resolved = UnifiedPaymentService.resolve_reconciliation_case(
+            case_id=case.id,
+            actor=self.admin,
+            action="confirm_payment",
+            notes="Confirmed via bank statement",
+        )
+        resolved.refresh_from_db()
+        intent.refresh_from_db()
+
+        self.assertEqual(resolved.case_status, ReconciliationCaseStatus.RESOLVED)
+        self.assertEqual(intent.status, PaymentStatus.SUCCESS)
+        self.assertTrue(hasattr(intent, "receipt"))
 
     def test_create_pdf_link_and_download_consumes_token(self):
         from urllib.parse import urlparse
